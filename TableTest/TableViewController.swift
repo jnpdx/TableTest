@@ -47,7 +47,7 @@ class JNPrefCell : UITableViewCell {
     
     override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        
+        self.textLabel?.font = UIFont(name: "AvenirNext-Regular", size: 16)
         self.selectionStyle = .none
     }
     
@@ -75,6 +75,7 @@ class JNStepperCell : JNPrefCell {
     }
     
     override func setupCell() {
+        self.valueLabel.font = UIFont(name: "AvenirNext-Regular", size: 16)
         if let minValue = prefItem.actualValues?.first as? Int,
             let maxValue = prefItem.actualValues?.last as? Int {
             stepper.minimumValue = Double(minValue)
@@ -149,6 +150,8 @@ class JNSliderCell : JNPrefCell {
     }
     
     override func setupCell() {
+        self.valueLabel.font = UIFont(name: "AvenirNext-Regular", size: 16)
+        
         if let minValue = prefItem.actualValues?.first as? Float,
             let maxValue = prefItem.actualValues?.last as? Float {
             slider.minimumValue = minValue
@@ -210,6 +213,8 @@ class JNPickerCell : JNPrefCell {
     var valueLabel = UILabel()
     
     override func setupCell() {
+        self.valueLabel.font = UIFont(name: "AvenirNext-Regular", size: 16)
+        
         valueLabel.text = "\(prefItem.displayValues![prefItem.defaultValue as! Int])"
         valueLabel.sizeToFit()
         
