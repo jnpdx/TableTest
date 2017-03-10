@@ -42,7 +42,13 @@ enum PrefTypes : String {
     case radioPref
 }
 
+protocol JNPrefCellDelegate {
+    func prefCellValueChanged(value : Any, withPrefItem prefItem : PrefItem)
+}
+
 class JNPrefCell : UITableViewCell {
+    var delegate : JNPrefCellDelegate?
+    
     var prefItem : PrefItem! {
         didSet {
             self.setupCell()
@@ -62,6 +68,17 @@ class JNPrefCell : UITableViewCell {
         assertionFailure("Not implemented")
     }
     
+    func getValueAndUpdate(_ sender : Any) -> Any {
+        assertionFailure("Implement in subclass")
+        return 0
+    }
+    
+    func defaultAction(sender : Any) {
+        let newValue = self.getValueAndUpdate(sender)
+        print("\(prefItem.key) \"\(prefItem.displayName)\" new value: \(newValue)")
+        delegate?.prefCellValueChanged(value: newValue, withPrefItem: prefItem)
+    }
+    
     func setupCell() {
         assertionFailure("Must be implemented by subclass")
     }
@@ -79,9 +96,9 @@ class JNStepperCell : JNPrefCell {
     var stepper = UIStepper()
     var valueLabel = UILabel()
     
-    func stepperPressed() {
+    override func getValueAndUpdate(_ sender: Any) -> Any {
         valueLabel.text = "\(Int(stepper.value))"
-        prefItem.actionBlock?(Int(stepper.value))
+        return Int(stepper.value)
     }
     
     override func setupCell() {
@@ -92,7 +109,7 @@ class JNStepperCell : JNPrefCell {
             stepper.maximumValue = Double(maxValue)
         }
         
-        stepper.addTarget(self, action: #selector(self.stepperPressed), for: .valueChanged)
+        stepper.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .valueChanged)
         stepper.value = Double(prefItem.defaultValue as! Int)
         
         stepper.sizeToFit()
@@ -138,12 +155,12 @@ class JNSwitchCell : JNPrefCell {
     
     var optionSwitch = UISwitch()
     
-    func switchChanged() {
-        self.prefItem.actionBlock?(optionSwitch.isOn)
+    override func getValueAndUpdate(_ sender: Any) -> Any {
+        return optionSwitch.isOn
     }
     
     override func setupCell() {
-        optionSwitch.addTarget(self, action: #selector(self.switchChanged), for: .valueChanged)
+        optionSwitch.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .valueChanged)
         optionSwitch.isOn = self.prefItem.defaultValue as! Bool
         self.accessoryView = optionSwitch
     }
@@ -154,9 +171,9 @@ class JNSliderCell : JNPrefCell {
     var slider = UISlider()
     var valueLabel = UILabel()
     
-    func sliderChanged() {
+    override func getValueAndUpdate(_ sender: Any) -> Any {
         self.valueLabel.text = "\(slider.value)"
-        self.prefItem?.actionBlock?(slider.value)
+        return slider.value
     }
     
     override func setupCell() {
@@ -170,8 +187,8 @@ class JNSliderCell : JNPrefCell {
         
         slider.value = self.prefItem.defaultValue as! Float
         
-        slider.addTarget(self, action: #selector(self.sliderChanged), for: .touchUpInside)
-        slider.addTarget(self, action: #selector(self.sliderChanged), for: .touchUpOutside)
+        slider.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .touchUpInside)
+        slider.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .touchUpOutside)
         
         valueLabel.text = "\(prefItem.defaultValue)"
         valueLabel.sizeToFit()
@@ -221,6 +238,7 @@ class JNSliderCell : JNPrefCell {
 
 class JNPickerCell : JNPrefCell {
     var valueLabel = UILabel()
+    var curIndex = 0
     
     override func setupCell() {
         self.valueLabel.font = self.defaultTextFont
@@ -256,15 +274,20 @@ class JNPickerCell : JNPrefCell {
         NSLayoutConstraint.activate(allConstraints)
     }
     
+    override func getValueAndUpdate(_ value: Any) -> Any {
+        self.valueLabel.text = value as? String
+        return value
+    }
+    
     override func didSelectCell(fromViewController vc : UITableViewController) {
         print("Open action picker")
         
-        ActionSheetStringPicker.show(withTitle: prefItem.displayName, rows: prefItem.displayValues!, initialSelection: 0, doneBlock: { [unowned self] (picker, index, value) in
+        ActionSheetStringPicker.show(withTitle: prefItem.displayName, rows: prefItem.displayValues!, initialSelection: curIndex, doneBlock: { [unowned self] (picker, index, value) in
             
-            if let value = value as? String {
-                self.valueLabel.text = value
-                self.prefItem.actionBlock?(value)
+            if let value = value {
+                self.defaultAction(sender: value)
             }
+            self.curIndex = index
             
         }, cancel: { (picker) in
             
@@ -372,6 +395,8 @@ class JNPrefTableViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: dataItem.prefType.rawValue, for: indexPath) as! JNPrefCell
 
+        cell.delegate = self
+        
         cell.prefItem = dataItem
         
         return cell
@@ -382,4 +407,10 @@ class JNPrefTableViewController: UITableViewController {
         cell.didSelectCell(fromViewController: self)
     }
  
+}
+
+extension JNPrefTableViewController: JNPrefCellDelegate {
+    internal func prefCellValueChanged(value: Any, withPrefItem prefItem: PrefItem) {
+        print("Delegate method called for \(prefItem.displayName) = \(value)")
+    }
 }
