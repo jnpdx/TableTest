@@ -1,0 +1,9 @@
+DerivedData*
+Pods*
+Podfile.lock
+*.xcworkspacedata
+
+*.xcbkptlist
+
+*.xcscheme
+*xcuserdata*
