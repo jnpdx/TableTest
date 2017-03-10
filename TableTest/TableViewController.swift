@@ -8,27 +8,21 @@
 
 import UIKit
 
-let tableData : [[PrefItem<Any,Any>]] = [
-    [
-        PrefItem(key:"testKey1",displayName:"Bool",  prefType:PrefTypes.boolPref,defaultValue: false),
-        PrefItem(key:"testKey2",displayName:"Float",prefType:PrefTypes.floatPref,defaultValue: 0 as Float),
-        PrefItem(key:"testKey3",displayName:"Int",prefType:PrefTypes.intPref,defaultValue: 0 as Int),
-        PrefItem(key:"testKey4",displayName:"Test 4",prefType:PrefTypes.boolPref,defaultValue: true),
-        PrefItem(key:"testKey5",displayName:"Test 5",prefType:PrefTypes.boolPref,defaultValue: false)]
-]
-
-struct PrefItem<T,U> {
+struct PrefItem {
     let key : String
     let displayName : String
     let prefType : PrefTypes
 
-    let description : String?
+    var description : String?
     
-    let defaultValue : T
-    let displayValues : [U]?
-    let actualValues : [T]?
+    let defaultValue : Any
+    var displayValues : [Any]?
+    var actualValues : [Any]?
     
-    init(key: String, displayName: String, prefType: PrefTypes, defaultValue : T) {
+    
+    var actionBlock : ((_ : Any) -> Void)?
+    
+    init(key: String, displayName: String, prefType: PrefTypes, defaultValue : Any) {
         self.key = key
         self.displayName = displayName
         self.prefType = prefType
@@ -44,13 +38,29 @@ enum PrefTypes : String {
     case boolPref
     case floatPref
     case intPref
+    case radioPref
 }
 
 class JNPrefCell : UITableViewCell {
-    var prefItem : PrefItem<Any, Any>!
+    var prefItem : PrefItem!
+    
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        
+        self.selectionStyle = .none
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        assertionFailure("Not implemented")
+    }
     
     func setupCell() {
         assertionFailure("Must be implemented by subclass")
+    }
+    
+    func didSelectCell(fromViewController vc : UITableViewController) {
+        //do nothing, but it could be subclassed
     }
 }
 
@@ -58,11 +68,21 @@ class JNStepperCell : JNPrefCell {
     var stepper = UIStepper()
     var valueLabel = UILabel()
     
-    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
+    func stepperPressed() {
+        valueLabel.text = "\(Int(stepper.value))"
+        prefItem.actionBlock?(Int(stepper.value))
     }
     
     override func setupCell() {
+        if let minValue = prefItem.actualValues?.first as? Int,
+            let maxValue = prefItem.actualValues?.last as? Int {
+            stepper.minimumValue = Double(minValue)
+            stepper.maximumValue = Double(maxValue)
+        }
+        
+        stepper.addTarget(self, action: #selector(self.stepperPressed), for: .valueChanged)
+        
+        
         stepper.sizeToFit()
         valueLabel.text = "\(prefItem.defaultValue)"
         valueLabel.sizeToFit()
@@ -99,28 +119,17 @@ class JNStepperCell : JNPrefCell {
         
         NSLayoutConstraint.activate(allConstraints)
     }
-    
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
+
 }
 
 class JNSwitchCell : JNPrefCell {
     
-    var optionSwitch : UISwitch!
+    var optionSwitch = UISwitch()
     
     override func setupCell() {
         optionSwitch.isOn = self.prefItem.defaultValue as! Bool
-    }
-    
-    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
         optionSwitch = UISwitch()
         self.accessoryView = optionSwitch
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
     }
     
 }
@@ -129,14 +138,6 @@ class JNSliderCell : JNPrefCell {
     var slider = UISlider()
     var valueLabel = UILabel()
     
-    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-        
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
     
     override func setupCell() {
         valueLabel.text = "\(prefItem.defaultValue)"
@@ -185,26 +186,84 @@ class JNSliderCell : JNPrefCell {
     }
 }
 
-class TableViewController: UITableViewController {
+class JNPickerCell : JNPrefCell {
+    var valueLabel = UILabel()
+    
+    override func setupCell() {
+        valueLabel.text = "\(prefItem.defaultValue)"
+        valueLabel.sizeToFit()
+        
+        valueLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        self.addSubview(valueLabel)
+        
+        
+        let views : [String:UIView] = ["valueLabel":valueLabel]
+        
+        let metrics : [String:Any] = ["padding":16]
+        
+        var allConstraints = [NSLayoutConstraint]()
+        
+        let labelVerticalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "V:|[valueLabel]|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += labelVerticalConstraints
+        
+        let sliderHorizontalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "H:[valueLabel]-padding-|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += sliderHorizontalConstraints
+        
+        NSLayoutConstraint.activate(allConstraints)
+    }
+    
+    override func didSelectCell(fromViewController vc : UITableViewController) {
+        print("Open action picker")
+    }
+}
 
+class JNPrefTableViewController: UITableViewController {
+
+    var tableData = [[PrefItem]]()
+    
+    func constructTableData() {
+        tableData.append(
+            [
+                PrefItem(key:"testKey1",displayName:"Bool",     prefType:PrefTypes.boolPref,defaultValue: false),
+                PrefItem(key:"testKey2",displayName:"Float",    prefType:PrefTypes.floatPref,defaultValue: 0 as Float),
+                PrefItem(key:"testKey3",displayName:"Int",      prefType:PrefTypes.intPref,defaultValue: 0 as Int),
+                PrefItem(key:"testKey4",displayName:"Test 4",   prefType:PrefTypes.boolPref,defaultValue: true),
+                PrefItem(key:"testKey5",displayName:"Test 5",   prefType:PrefTypes.boolPref,defaultValue: false),
+                PrefItem(key:"testKey6",displayName:"Radio",    prefType:PrefTypes.radioPref,defaultValue: "Item"),
+                ]
+        )
+        
+        do {
+            var prefItem = PrefItem(key:"testKey3",displayName:"Int 1-6",prefType:PrefTypes.intPref,defaultValue: 1 as Int)
+            prefItem.actualValues = [1,6]
+            prefItem.actionBlock = { (newValue : Any) in
+                print("New value: \(newValue)")
+            }
+            tableData[0].append(prefItem)
+        }
+        
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // Uncomment the following line to preserve selection between presentations
-        // self.clearsSelectionOnViewWillAppear = false
-
-        // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-        // self.navigationItem.rightBarButtonItem = self.editButtonItem()
         
+        self.constructTableData()
+
         self.tableView.register(JNStepperCell.self, forCellReuseIdentifier: PrefTypes.intPref.rawValue)
         self.tableView.register(JNSliderCell.self, forCellReuseIdentifier: PrefTypes.floatPref.rawValue)
         self.tableView.register(JNSwitchCell.self, forCellReuseIdentifier: PrefTypes.boolPref.rawValue)
+        self.tableView.register(JNPickerCell.self, forCellReuseIdentifier: PrefTypes.radioPref.rawValue)
     }
 
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
-    }
 
     // MARK: - Table view data source
 
@@ -232,51 +291,10 @@ class TableViewController: UITableViewController {
         
         return cell
     }
+    
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let cell = tableView.cellForRow(at: indexPath) as! JNPrefCell
+        cell.didSelectCell(fromViewController: self)
+    }
  
-
-    /*
-    // Override to support conditional editing of the table view.
-    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the specified item to be editable.
-        return true
-    }
-    */
-
-    /*
-    // Override to support editing the table view.
-    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            // Delete the row from the data source
-            tableView.deleteRows(at: [indexPath], with: .fade)
-        } else if editingStyle == .insert {
-            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-        }    
-    }
-    */
-
-    /*
-    // Override to support rearranging the table view.
-    override func tableView(_ tableView: UITableView, moveRowAt fromIndexPath: IndexPath, to: IndexPath) {
-
-    }
-    */
-
-    /*
-    // Override to support conditional rearranging of the table view.
-    override func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the item to be re-orderable.
-        return true
-    }
-    */
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }
