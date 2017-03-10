@@ -13,7 +13,7 @@ let tableData : [[PrefItem<Any,Any>]] = [
         PrefItem(key:"testKey1",displayName:"Bool",  prefType:PrefTypes.boolPref,defaultValue: false),
         PrefItem(key:"testKey2",displayName:"Float",prefType:PrefTypes.floatPref,defaultValue: 0 as Float),
         PrefItem(key:"testKey3",displayName:"Int",prefType:PrefTypes.intPref,defaultValue: 0 as Int),
-        PrefItem(key:"testKey4",displayName:"Test 4",prefType:PrefTypes.boolPref,defaultValue: false),
+        PrefItem(key:"testKey4",displayName:"Test 4",prefType:PrefTypes.boolPref,defaultValue: true),
         PrefItem(key:"testKey5",displayName:"Test 5",prefType:PrefTypes.boolPref,defaultValue: false)]
 ]
 
@@ -48,16 +48,56 @@ enum PrefTypes : String {
 
 class JNPrefCell : UITableViewCell {
     var prefItem : PrefItem<Any, Any>!
+    
+    func setupCell() {
+        assertionFailure("Must be implemented by subclass")
+    }
 }
 
 class JNStepperCell : JNPrefCell {
-    var stepper : UIStepper!
+    var stepper = UIStepper()
+    var valueLabel = UILabel()
     
     override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        stepper = UIStepper(frame: CGRect.zero)
+    }
+    
+    override func setupCell() {
         stepper.sizeToFit()
-        self.accessoryView = stepper
+        valueLabel.text = "\(prefItem.defaultValue)"
+        valueLabel.sizeToFit()
+        
+        valueLabel.translatesAutoresizingMaskIntoConstraints = false
+        stepper.translatesAutoresizingMaskIntoConstraints = false
+        
+        self.addSubview(stepper)
+        self.addSubview(valueLabel)
+        
+        let views : [String:UIView] = ["stepper":stepper,"valueLabel":valueLabel]
+        
+        let metrics : [String:Any] = ["padding":16]
+        
+        var allConstraints = [NSLayoutConstraint]()
+        
+
+        let sliderVerticalCenteringConstraint = NSLayoutConstraint(item: stepper, attribute: .centerY, relatedBy: .equal, toItem: self, attribute: .centerY, multiplier: 1.0, constant: 0.0)
+        allConstraints += [sliderVerticalCenteringConstraint]
+        
+        let labelVerticalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "V:|[valueLabel]|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += labelVerticalConstraints
+        
+        let sliderHorizontalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "H:[valueLabel]-padding-[stepper]-padding-|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += sliderHorizontalConstraints
+        
+        NSLayoutConstraint.activate(allConstraints)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -68,6 +108,10 @@ class JNStepperCell : JNPrefCell {
 class JNSwitchCell : JNPrefCell {
     
     var optionSwitch : UISwitch!
+    
+    override func setupCell() {
+        optionSwitch.isOn = self.prefItem.defaultValue as! Bool
+    }
     
     override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -82,7 +126,63 @@ class JNSwitchCell : JNPrefCell {
 }
 
 class JNSliderCell : JNPrefCell {
+    var slider = UISlider()
+    var valueLabel = UILabel()
     
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+    }
+    
+    override func setupCell() {
+        valueLabel.text = "\(prefItem.defaultValue)"
+        valueLabel.sizeToFit()
+        
+        valueLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        self.addSubview(valueLabel)
+        
+        slider.frame = CGRect.zero
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        
+        self.addSubview(slider)
+        
+        let views : [String:UIView] = ["slider":slider,"valueLabel":valueLabel]
+        
+        let metrics : [String:Any] = ["padding":16]
+        
+        var allConstraints = [NSLayoutConstraint]()
+        
+        
+        let sliderVerticalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "V:|[slider]|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += sliderVerticalConstraints
+        
+        let labelVerticalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "V:|[valueLabel]|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += labelVerticalConstraints
+        
+        let sliderHorizontalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "H:[valueLabel]-padding-[slider(100)]-padding-|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += sliderHorizontalConstraints
+        
+        NSLayoutConstraint.activate(allConstraints)
+    }
 }
 
 class TableViewController: UITableViewController {
@@ -125,6 +225,8 @@ class TableViewController: UITableViewController {
         let cell = tableView.dequeueReusableCell(withIdentifier: dataItem.prefType.rawValue, for: indexPath) as! JNPrefCell
 
         cell.prefItem = dataItem
+        
+        cell.setupCell()
         
         cell.textLabel?.text = dataItem.displayName
         
