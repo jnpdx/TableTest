@@ -9,21 +9,18 @@
 import UIKit
 import ActionSheetPicker_3_0
 
-struct PrefItem {
+public struct PrefItem {
     let key : String
     let displayName : String
     let prefType : PrefTypes
 
-    var description : String?
+    public var description : String?
     
     let defaultValue : Any
-    var displayValues : [Any]?
-    var actualValues : [Any]?
+    public var displayValues : [Any]?
+    public var actualValues : [Any]?
     
-    
-    var actionBlock : ((_ : Any) -> Void)?
-    
-    init(key: String, displayName: String, prefType: PrefTypes, defaultValue : Any) {
+    public init(key: String, displayName: String, prefType: PrefTypes, defaultValue : Any) {
         self.key = key
         self.displayName = displayName
         self.prefType = prefType
@@ -35,7 +32,7 @@ struct PrefItem {
     }
 }
 
-enum PrefTypes : String {
+public enum PrefTypes : String {
     case boolPref
     case floatPref
     case intPref
@@ -295,76 +292,24 @@ class JNPickerCell : JNPrefCell {
     }
 }
 
-struct PrefItemSection {
-    let title : String
-    var items : [PrefItem]
+public struct PrefItemSection {
+    public let title : String
+    public var items : [PrefItem]
+    
+    public init(title : String, items: [PrefItem]) {
+        self.title = title
+        self.items = items
+    }
 }
 
-class JNPrefTableViewController: UITableViewController {
+open class JNPrefTableViewController: UITableViewController {
 
-    var tableData = [PrefItemSection]()
+    public var tableData = [PrefItemSection]()
     
-    func constructTableData() {
-        
-        tableData.append(PrefItemSection(title: "Real", items: []))
-        
-        do {
-            var prefItem = PrefItem(key:"testKey3",displayName:"Int 1-6",prefType:PrefTypes.intPref,defaultValue: 1 as Int)
-            prefItem.actualValues = [1,6]
-            prefItem.actionBlock = { (newValue : Any) in
-                print("New value: \(newValue)")
-            }
-            tableData[0].items.append(prefItem)
-        }
-        
-        do {
-            var prefItem = PrefItem(key:"testKey4",displayName:"Bool",prefType:PrefTypes.boolPref,defaultValue: true)
-            prefItem.actionBlock = { (newValue : Any) in
-                print("\(prefItem.key) new value: \(newValue)")
-            }
-            tableData[0].items.append(prefItem)
-        }
-        
-        do {
-            var prefItem = PrefItem(key:"testKey5",displayName:"Int 1-7",prefType:PrefTypes.intPref,defaultValue: 2 as Int)
-            prefItem.actualValues = [1,7]
-            tableData[0].items.append(prefItem)
-        }
-        
-        do {
-            var prefItem = PrefItem(key:"testKey6",displayName:"Float 0-2",prefType:PrefTypes.floatPref,defaultValue: 2 as Float)
-            prefItem.actualValues = [0.0 as Float,2.0 as Float]
-            prefItem.actionBlock = { (newValue : Any) in
-                print("\(prefItem.key) new value: \(newValue)")
-            }
-            tableData[0].items.append(prefItem)
-        }
-        
-        do {
-            var prefItem = PrefItem(key:"testKey7",displayName:"Radio 2",prefType:PrefTypes.radioPref,defaultValue: 2)
-            prefItem.actualValues = [0,1,2,3,4]
-            prefItem.displayValues = ["Zero","One","Two","Three","Four"]
-            prefItem.actionBlock = { (newValue : Any) in
-                print("\(prefItem.key) new value: \(newValue)")
-            }
-            tableData[0].items.append(prefItem)
-        }
-        
-        tableData.append(PrefItemSection(title: "Fake", items:
-            [
-                PrefItem(key:"testKey1",displayName:"Bool",     prefType:PrefTypes.boolPref,defaultValue: false),
-                PrefItem(key:"testKey2",displayName:"Float",    prefType:PrefTypes.floatPref,defaultValue: 0 as Float),
-                PrefItem(key:"testKey3",displayName:"Int",      prefType:PrefTypes.intPref,defaultValue: 0 as Int),
-                PrefItem(key:"testKey4",displayName:"Test 4",   prefType:PrefTypes.boolPref,defaultValue: true),
-                PrefItem(key:"testKey5",displayName:"Test 5",   prefType:PrefTypes.boolPref,defaultValue: false),
-                ])
-        )
-    }
     
-    override func viewDidLoad() {
+    
+    override open func viewDidLoad() {
         super.viewDidLoad()
-        
-        self.constructTableData()
         //self.tableView.style = UITableViewStyle.grouped
 
         self.tableView.register(JNStepperCell.self, forCellReuseIdentifier: PrefTypes.intPref.rawValue)
@@ -376,20 +321,20 @@ class JNPrefTableViewController: UITableViewController {
 
     // MARK: - Table view data source
 
-    override func numberOfSections(in tableView: UITableView) -> Int {
+    override open func numberOfSections(in tableView: UITableView) -> Int {
         return tableData.count
     }
 
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override open func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
         return tableData[section].items.count
     }
 
-    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+    override open func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         return tableData[section].title
     }
     
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    override open func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let dataItem = tableData[indexPath.section].items[indexPath.row]
         
@@ -402,7 +347,7 @@ class JNPrefTableViewController: UITableViewController {
         return cell
     }
     
-    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    override open func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let cell = tableView.cellForRow(at: indexPath) as! JNPrefCell
         cell.didSelectCell(fromViewController: self)
     }
