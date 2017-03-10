@@ -210,7 +210,7 @@ class JNPickerCell : JNPrefCell {
     var valueLabel = UILabel()
     
     override func setupCell() {
-        valueLabel.text = "\(prefItem.defaultValue)"
+        valueLabel.text = "\(prefItem.displayValues![prefItem.defaultValue as! Int])"
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -243,6 +243,17 @@ class JNPickerCell : JNPrefCell {
     
     override func didSelectCell(fromViewController vc : UITableViewController) {
         print("Open action picker")
+        
+        ActionSheetStringPicker.show(withTitle: prefItem.displayName, rows: prefItem.displayValues!, initialSelection: 0, doneBlock: { [unowned self] (picker, index, value) in
+            
+            if let value = value as? String {
+                self.valueLabel.text = value
+                self.prefItem.actionBlock?(value)
+            }
+            
+        }, cancel: { (picker) in
+            
+        }, origin: self)
     }
 }
 
@@ -258,7 +269,6 @@ class JNPrefTableViewController: UITableViewController {
                 PrefItem(key:"testKey3",displayName:"Int",      prefType:PrefTypes.intPref,defaultValue: 0 as Int),
                 PrefItem(key:"testKey4",displayName:"Test 4",   prefType:PrefTypes.boolPref,defaultValue: true),
                 PrefItem(key:"testKey5",displayName:"Test 5",   prefType:PrefTypes.boolPref,defaultValue: false),
-                PrefItem(key:"testKey6",displayName:"Radio",    prefType:PrefTypes.radioPref,defaultValue: "Item"),
                 ]
         )
         
@@ -288,6 +298,16 @@ class JNPrefTableViewController: UITableViewController {
         do {
             var prefItem = PrefItem(key:"testKey6",displayName:"Float 0-2",prefType:PrefTypes.floatPref,defaultValue: 2 as Float)
             prefItem.actualValues = [0.0 as Float,2.0 as Float]
+            prefItem.actionBlock = { (newValue : Any) in
+                print("\(prefItem.key) new value: \(newValue)")
+            }
+            tableData[0].append(prefItem)
+        }
+        
+        do {
+            var prefItem = PrefItem(key:"testKey7",displayName:"Radio 2",prefType:PrefTypes.radioPref,defaultValue: 2)
+            prefItem.actualValues = [0,1,2,3,4]
+            prefItem.displayValues = ["Zero","One","Two","Three","Four"]
             prefItem.actionBlock = { (newValue : Any) in
                 print("\(prefItem.key) new value: \(newValue)")
             }
