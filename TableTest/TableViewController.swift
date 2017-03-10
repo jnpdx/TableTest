@@ -43,11 +43,17 @@ enum PrefTypes : String {
 }
 
 class JNPrefCell : UITableViewCell {
-    var prefItem : PrefItem!
+    var prefItem : PrefItem! {
+        didSet {
+            self.setupCell()
+            
+            self.textLabel?.text = prefItem.displayName
+        }
+    }
     
     override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        self.textLabel?.font = UIFont(name: "AvenirNext-Regular", size: 16)
+        self.textLabel?.font = self.defaultTextFont
         self.selectionStyle = .none
     }
     
@@ -65,6 +71,10 @@ class JNPrefCell : UITableViewCell {
     }
 }
 
+extension JNPrefCell {
+    var defaultTextFont : UIFont { return UIFont(name: "AvenirNext-Regular", size: 16)! }
+}
+
 class JNStepperCell : JNPrefCell {
     var stepper = UIStepper()
     var valueLabel = UILabel()
@@ -75,7 +85,7 @@ class JNStepperCell : JNPrefCell {
     }
     
     override func setupCell() {
-        self.valueLabel.font = UIFont(name: "AvenirNext-Regular", size: 16)
+        self.valueLabel.font = self.defaultTextFont
         if let minValue = prefItem.actualValues?.first as? Int,
             let maxValue = prefItem.actualValues?.last as? Int {
             stepper.minimumValue = Double(minValue)
@@ -150,7 +160,7 @@ class JNSliderCell : JNPrefCell {
     }
     
     override func setupCell() {
-        self.valueLabel.font = UIFont(name: "AvenirNext-Regular", size: 16)
+        self.valueLabel.font = self.defaultTextFont
         
         if let minValue = prefItem.actualValues?.first as? Float,
             let maxValue = prefItem.actualValues?.last as? Float {
@@ -213,7 +223,7 @@ class JNPickerCell : JNPrefCell {
     var valueLabel = UILabel()
     
     override func setupCell() {
-        self.valueLabel.font = UIFont(name: "AvenirNext-Regular", size: 16)
+        self.valueLabel.font = self.defaultTextFont
         
         valueLabel.text = "\(prefItem.displayValues![prefItem.defaultValue as! Int])"
         valueLabel.sizeToFit()
@@ -262,20 +272,18 @@ class JNPickerCell : JNPrefCell {
     }
 }
 
+struct PrefItemSection {
+    let title : String
+    var items : [PrefItem]
+}
+
 class JNPrefTableViewController: UITableViewController {
 
-    var tableData = [[PrefItem]]()
+    var tableData = [PrefItemSection]()
     
     func constructTableData() {
-        tableData.append(
-            [
-                PrefItem(key:"testKey1",displayName:"Bool",     prefType:PrefTypes.boolPref,defaultValue: false),
-                PrefItem(key:"testKey2",displayName:"Float",    prefType:PrefTypes.floatPref,defaultValue: 0 as Float),
-                PrefItem(key:"testKey3",displayName:"Int",      prefType:PrefTypes.intPref,defaultValue: 0 as Int),
-                PrefItem(key:"testKey4",displayName:"Test 4",   prefType:PrefTypes.boolPref,defaultValue: true),
-                PrefItem(key:"testKey5",displayName:"Test 5",   prefType:PrefTypes.boolPref,defaultValue: false),
-                ]
-        )
+        
+        tableData.append(PrefItemSection(title: "Real", items: []))
         
         do {
             var prefItem = PrefItem(key:"testKey3",displayName:"Int 1-6",prefType:PrefTypes.intPref,defaultValue: 1 as Int)
@@ -283,7 +291,7 @@ class JNPrefTableViewController: UITableViewController {
             prefItem.actionBlock = { (newValue : Any) in
                 print("New value: \(newValue)")
             }
-            tableData[0].append(prefItem)
+            tableData[0].items.append(prefItem)
         }
         
         do {
@@ -291,13 +299,13 @@ class JNPrefTableViewController: UITableViewController {
             prefItem.actionBlock = { (newValue : Any) in
                 print("\(prefItem.key) new value: \(newValue)")
             }
-            tableData[0].append(prefItem)
+            tableData[0].items.append(prefItem)
         }
         
         do {
             var prefItem = PrefItem(key:"testKey5",displayName:"Int 1-7",prefType:PrefTypes.intPref,defaultValue: 2 as Int)
             prefItem.actualValues = [1,7]
-            tableData[0].append(prefItem)
+            tableData[0].items.append(prefItem)
         }
         
         do {
@@ -306,7 +314,7 @@ class JNPrefTableViewController: UITableViewController {
             prefItem.actionBlock = { (newValue : Any) in
                 print("\(prefItem.key) new value: \(newValue)")
             }
-            tableData[0].append(prefItem)
+            tableData[0].items.append(prefItem)
         }
         
         do {
@@ -316,14 +324,25 @@ class JNPrefTableViewController: UITableViewController {
             prefItem.actionBlock = { (newValue : Any) in
                 print("\(prefItem.key) new value: \(newValue)")
             }
-            tableData[0].append(prefItem)
+            tableData[0].items.append(prefItem)
         }
+        
+        tableData.append(PrefItemSection(title: "Fake", items:
+            [
+                PrefItem(key:"testKey1",displayName:"Bool",     prefType:PrefTypes.boolPref,defaultValue: false),
+                PrefItem(key:"testKey2",displayName:"Float",    prefType:PrefTypes.floatPref,defaultValue: 0 as Float),
+                PrefItem(key:"testKey3",displayName:"Int",      prefType:PrefTypes.intPref,defaultValue: 0 as Int),
+                PrefItem(key:"testKey4",displayName:"Test 4",   prefType:PrefTypes.boolPref,defaultValue: true),
+                PrefItem(key:"testKey5",displayName:"Test 5",   prefType:PrefTypes.boolPref,defaultValue: false),
+                ])
+        )
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         self.constructTableData()
+        //self.tableView.style = UITableViewStyle.grouped
 
         self.tableView.register(JNStepperCell.self, forCellReuseIdentifier: PrefTypes.intPref.rawValue)
         self.tableView.register(JNSliderCell.self, forCellReuseIdentifier: PrefTypes.floatPref.rawValue)
@@ -340,21 +359,20 @@ class JNPrefTableViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return tableData[section].count
+        return tableData[section].items.count
     }
 
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        return tableData[section].title
+    }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let dataItem = tableData[indexPath.section][indexPath.row]
+        let dataItem = tableData[indexPath.section].items[indexPath.row]
         
         let cell = tableView.dequeueReusableCell(withIdentifier: dataItem.prefType.rawValue, for: indexPath) as! JNPrefCell
 
         cell.prefItem = dataItem
-        
-        cell.setupCell()
-        
-        cell.textLabel?.text = dataItem.displayName
         
         return cell
     }
