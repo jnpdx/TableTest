@@ -10,7 +10,7 @@ import UIKit
 import ActionSheetPicker_3_0
 
 public struct PrefItem {
-    let key : String
+    public let key : String
     let displayName : String
     let prefType : PrefTypes
 
@@ -39,7 +39,7 @@ public enum PrefTypes : String {
     case radioPref
 }
 
-protocol JNPrefCellDelegate {
+public protocol JNPrefCellDelegate {
     func prefCellValueChanged(value : Any, withPrefItem prefItem : PrefItem)
 }
 
@@ -302,7 +302,7 @@ public struct PrefItemSection {
     }
 }
 
-open class JNPrefTableViewController: UITableViewController {
+open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate {
 
     public var tableData = [PrefItemSection]()
     
@@ -352,10 +352,8 @@ open class JNPrefTableViewController: UITableViewController {
         cell.didSelectCell(fromViewController: self)
     }
  
-}
-
-extension JNPrefTableViewController: JNPrefCellDelegate {
-    internal func prefCellValueChanged(value: Any, withPrefItem prefItem: PrefItem) {
+    open func prefCellValueChanged(value: Any, withPrefItem prefItem: PrefItem) {
         print("Delegate method called for \(prefItem.displayName) = \(value)")
     }
 }
+
