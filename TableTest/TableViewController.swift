@@ -81,7 +81,7 @@ class JNStepperCell : JNPrefCell {
         }
         
         stepper.addTarget(self, action: #selector(self.stepperPressed), for: .valueChanged)
-        
+        stepper.value = Double(prefItem.defaultValue as! Int)
         
         stepper.sizeToFit()
         valueLabel.text = "\(prefItem.defaultValue)"
@@ -126,9 +126,13 @@ class JNSwitchCell : JNPrefCell {
     
     var optionSwitch = UISwitch()
     
+    func switchChanged() {
+        self.prefItem.actionBlock?(optionSwitch.isOn)
+    }
+    
     override func setupCell() {
+        optionSwitch.addTarget(self, action: #selector(self.switchChanged), for: .valueChanged)
         optionSwitch.isOn = self.prefItem.defaultValue as! Bool
-        optionSwitch = UISwitch()
         self.accessoryView = optionSwitch
     }
     
@@ -138,8 +142,23 @@ class JNSliderCell : JNPrefCell {
     var slider = UISlider()
     var valueLabel = UILabel()
     
+    func sliderChanged() {
+        self.valueLabel.text = "\(slider.value)"
+        self.prefItem?.actionBlock?(slider.value)
+    }
     
     override func setupCell() {
+        if let minValue = prefItem.actualValues?.first as? Float,
+            let maxValue = prefItem.actualValues?.last as? Float {
+            slider.minimumValue = minValue
+            slider.maximumValue = maxValue
+        }
+        
+        slider.value = self.prefItem.defaultValue as! Float
+        
+        slider.addTarget(self, action: #selector(self.sliderChanged), for: .touchUpInside)
+        slider.addTarget(self, action: #selector(self.sliderChanged), for: .touchUpOutside)
+        
         valueLabel.text = "\(prefItem.defaultValue)"
         valueLabel.sizeToFit()
         
@@ -251,6 +270,28 @@ class JNPrefTableViewController: UITableViewController {
             tableData[0].append(prefItem)
         }
         
+        do {
+            var prefItem = PrefItem(key:"testKey4",displayName:"Bool",prefType:PrefTypes.boolPref,defaultValue: true)
+            prefItem.actionBlock = { (newValue : Any) in
+                print("\(prefItem.key) new value: \(newValue)")
+            }
+            tableData[0].append(prefItem)
+        }
+        
+        do {
+            var prefItem = PrefItem(key:"testKey5",displayName:"Int 1-7",prefType:PrefTypes.intPref,defaultValue: 2 as Int)
+            prefItem.actualValues = [1,7]
+            tableData[0].append(prefItem)
+        }
+        
+        do {
+            var prefItem = PrefItem(key:"testKey6",displayName:"Float 0-2",prefType:PrefTypes.floatPref,defaultValue: 2 as Float)
+            prefItem.actualValues = [0.0 as Float,2.0 as Float]
+            prefItem.actionBlock = { (newValue : Any) in
+                print("\(prefItem.key) new value: \(newValue)")
+            }
+            tableData[0].append(prefItem)
+        }
     }
     
     override func viewDidLoad() {
