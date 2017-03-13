@@ -20,15 +20,15 @@ public struct PrefItem {
     public var displayValues : [Any]?
     public var actualValues : [Any]?
     
-    public init(key: String, displayName: String, prefType: PrefTypes, defaultValue : Any) {
+    public init(key: String, displayName: String, prefType: PrefTypes, defaultValue : Any, displayValues: [Any]? = nil, actualValues: [Any]? = nil) {
         self.key = key
         self.displayName = displayName
         self.prefType = prefType
         self.defaultValue = defaultValue
         
         description = nil
-        displayValues = nil
-        actualValues = nil
+        self.displayValues = displayValues
+        self.actualValues = actualValues
     }
 }
 
@@ -46,6 +46,13 @@ public protocol JNPrefCellDelegate {
 class JNPrefCell : UITableViewCell {
     var delegate : JNPrefCellDelegate?
     
+    class func registerClasses(onTableView tableView: UITableView) {
+        tableView.register(JNStepperCell.self, forCellReuseIdentifier: PrefTypes.intPref.rawValue)
+        tableView.register(JNSliderCell.self, forCellReuseIdentifier: PrefTypes.floatPref.rawValue)
+        tableView.register(JNSwitchCell.self, forCellReuseIdentifier: PrefTypes.boolPref.rawValue)
+        tableView.register(JNPickerCell.self, forCellReuseIdentifier: PrefTypes.radioPref.rawValue)
+    }
+    
     var prefItem : PrefItem! {
         didSet {
             self.setupCell()
@@ -58,6 +65,7 @@ class JNPrefCell : UITableViewCell {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         self.textLabel?.font = self.defaultTextFont
         self.selectionStyle = .none
+        self.backgroundColor = UIColor.clear
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -80,7 +88,7 @@ class JNPrefCell : UITableViewCell {
         assertionFailure("Must be implemented by subclass")
     }
     
-    func didSelectCell(fromViewController vc : UITableViewController) {
+    func didSelectCell() {
         //do nothing, but it could be subclassed
     }
 }
@@ -276,7 +284,7 @@ class JNPickerCell : JNPrefCell {
         return value
     }
     
-    override func didSelectCell(fromViewController vc : UITableViewController) {
+    override func didSelectCell() {
         print("Open action picker")
         
         ActionSheetStringPicker.show(withTitle: prefItem.displayName, rows: prefItem.displayValues!, initialSelection: curIndex, doneBlock: { [unowned self] (picker, index, value) in
@@ -304,18 +312,15 @@ public struct PrefItemSection {
 
 open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate {
 
+    //TODO: replace with JNPrefTableInterface
+    
     public var tableData = [PrefItemSection]()
     
     
     
     override open func viewDidLoad() {
         super.viewDidLoad()
-        //self.tableView.style = UITableViewStyle.grouped
-
-        self.tableView.register(JNStepperCell.self, forCellReuseIdentifier: PrefTypes.intPref.rawValue)
-        self.tableView.register(JNSliderCell.self, forCellReuseIdentifier: PrefTypes.floatPref.rawValue)
-        self.tableView.register(JNSwitchCell.self, forCellReuseIdentifier: PrefTypes.boolPref.rawValue)
-        self.tableView.register(JNPickerCell.self, forCellReuseIdentifier: PrefTypes.radioPref.rawValue)
+        JNPrefCell.registerClasses(onTableView: self.tableView)
     }
 
 
@@ -349,11 +354,60 @@ open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate 
     
     override open func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let cell = tableView.cellForRow(at: indexPath) as! JNPrefCell
-        cell.didSelectCell(fromViewController: self)
+        cell.didSelectCell()
     }
  
     open func prefCellValueChanged(value: Any, withPrefItem prefItem: PrefItem) {
         print("Delegate method called for \(prefItem.displayName) = \(value)")
     }
+}
+
+open class JNPrefTableInterface : NSObject, UITableViewDataSource, UITableViewDelegate, JNPrefCellDelegate {
+
+    public var tableData = [PrefItemSection]()
+    weak var tableView : UITableView!
+    
+    public init(withTableView tableView: UITableView) {
+        super.init()
+        self.tableView = tableView
+        self.tableView.dataSource = self
+        self.tableView.delegate = self
+        JNPrefCell.registerClasses(onTableView: self.tableView)
+    }
+    
+    open func numberOfSections(in tableView: UITableView) -> Int {
+        return tableData.count
+    }
+    
+    open func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return tableData[section].items.count
+    }
+    
+    open func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        return tableData[section].title
+    }
+    
+    open func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
+        let dataItem = tableData[indexPath.section].items[indexPath.row]
+        
+        let cell = tableView.dequeueReusableCell(withIdentifier: dataItem.prefType.rawValue, for: indexPath) as! JNPrefCell
+        
+        cell.delegate = self
+        
+        cell.prefItem = dataItem
+        
+        return cell
+    }
+    
+    open func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let cell = tableView.cellForRow(at: indexPath) as! JNPrefCell
+        cell.didSelectCell()
+    }
+    
+    public func prefCellValueChanged(value: Any, withPrefItem prefItem: PrefItem) {
+        print("Delegate method called for \(prefItem.displayName) = \(value)")
+    }
+    
 }
 
