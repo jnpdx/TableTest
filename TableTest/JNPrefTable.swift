@@ -364,7 +364,7 @@ open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate 
 
 open class JNPrefTableInterface : NSObject, UITableViewDataSource, UITableViewDelegate, JNPrefCellDelegate {
 
-    public var tableData = [PrefItemSection]()
+    open var tableData = [PrefItemSection]()
     weak var tableView : UITableView!
     
     public init(withTableView tableView: UITableView) {
@@ -405,7 +405,7 @@ open class JNPrefTableInterface : NSObject, UITableViewDataSource, UITableViewDe
         cell.didSelectCell()
     }
     
-    public func prefCellValueChanged(value: Any, withPrefItem prefItem: PrefItem) {
+    open func prefCellValueChanged(value: Any, withPrefItem prefItem: PrefItem) {
         print("Delegate method called for \(prefItem.displayName) = \(value)")
     }
     
