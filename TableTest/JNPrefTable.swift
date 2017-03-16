@@ -16,14 +16,26 @@ public struct PrefItem {
 
     public var description : String?
     
-    let defaultValue : Any
+    private let currentValue : Any?
+    
+    private let defaultValue : Any
+    
+    var value : Any {
+        guard let currentValue = currentValue else {
+            return defaultValue
+        }
+        return currentValue
+    }
+    
     public var displayValues : [Any]?
     public var actualValues : [Any]?
     
-    public init(key: String, displayName: String, prefType: PrefTypes, defaultValue : Any, displayValues: [Any]? = nil, actualValues: [Any]? = nil) {
+    public init(key: String, displayName: String, prefType: PrefTypes, currentValue : Any?, defaultValue: Any, displayValues: [Any]? = nil, actualValues: [Any]? = nil) {
         self.key = key
         self.displayName = displayName
         self.prefType = prefType
+        
+        self.currentValue = currentValue
         self.defaultValue = defaultValue
         
         description = nil
@@ -115,10 +127,10 @@ class JNStepperCell : JNPrefCell {
         }
         
         stepper.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .valueChanged)
-        stepper.value = Double(prefItem.defaultValue as! Int)
+        stepper.value = Double(prefItem.value as! Int)
         
         stepper.sizeToFit()
-        valueLabel.text = "\(prefItem.defaultValue)"
+        valueLabel.text = "\(prefItem.value)"
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -166,7 +178,7 @@ class JNSwitchCell : JNPrefCell {
     
     override func setupCell() {
         optionSwitch.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .valueChanged)
-        optionSwitch.isOn = self.prefItem.defaultValue as! Bool
+        optionSwitch.isOn = self.prefItem.value as! Bool
         self.accessoryView = optionSwitch
     }
     
@@ -190,12 +202,12 @@ class JNSliderCell : JNPrefCell {
             slider.maximumValue = maxValue
         }
         
-        slider.value = self.prefItem.defaultValue as! Float
+        slider.value = self.prefItem.value as! Float
         
         slider.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .touchUpInside)
         slider.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .touchUpOutside)
         
-        valueLabel.text = "\(prefItem.defaultValue)"
+        valueLabel.text = "\(prefItem.value)"
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -248,7 +260,7 @@ class JNPickerCell : JNPrefCell {
     override func setupCell() {
         self.valueLabel.font = self.defaultTextFont
         
-        valueLabel.text = "\(prefItem.displayValues![prefItem.defaultValue as! Int])"
+        valueLabel.text = "\(prefItem.displayValues![prefItem.value as! Int])"
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
