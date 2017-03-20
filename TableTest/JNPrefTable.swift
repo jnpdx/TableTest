@@ -285,6 +285,8 @@ class JNPickerCell : JNPrefCell {
     }
     
     override func setupCell() {
+        curIndex = self.indexOfValue(prefItem.value as! Int)
+        
         self.valueLabel.font = self.defaultTextFont
         
         
