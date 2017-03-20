@@ -9,6 +9,11 @@
 import UIKit
 import ActionSheetPicker_3_0
 
+
+public enum PrefResult {
+    case noValue
+}
+
 public struct PrefItem {
     public let key : String
     let displayName : String
@@ -21,7 +26,9 @@ public struct PrefItem {
     private let defaultValue : Any
     
     var value : Any {
-        guard let currentValue = currentValue else {
+        guard let currentValue = currentValue,
+            currentValue as? PrefResult != PrefResult.noValue
+        else {
             return defaultValue
         }
         return currentValue
@@ -114,6 +121,14 @@ class JNStepperCell : JNPrefCell {
     var valueLabel = UILabel()
     
     override func getValueAndUpdate(_ sender: Any) -> Any {
+//        if let displayValues = self.prefItem.displayValues {
+//            //find the right index of it
+//            //TODO: use displayValues
+//            valueLabel.text = "\(Int(stepper.value))"
+//            //valueLabel.text = "\(displayValues[prefItem.value as! Int])"
+//        } else {
+//            valueLabel.text = "\(Int(stepper.value))"
+//        }
         valueLabel.text = "\(Int(stepper.value))"
         return Int(stepper.value)
     }
@@ -257,10 +272,23 @@ class JNPickerCell : JNPrefCell {
     var valueLabel = UILabel()
     var curIndex = 0
     
+    func indexOfValue(_ value : Int) -> Int {
+        if let ints = prefItem.actualValues as? [Int] {
+            return ints.index(of: value) ?? 0
+        } else {
+            return 0
+        }
+    }
+    
+    func getDisplayValue(_ value: Int) -> String {
+        return "\(prefItem.displayValues![self.indexOfValue(value)])"
+    }
+    
     override func setupCell() {
         self.valueLabel.font = self.defaultTextFont
         
-        valueLabel.text = "\(prefItem.displayValues![prefItem.value as! Int])"
+        
+        valueLabel.text = self.getDisplayValue(prefItem.value as! Int)
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -292,18 +320,31 @@ class JNPickerCell : JNPrefCell {
     }
     
     override func getValueAndUpdate(_ value: Any) -> Any {
-        self.valueLabel.text = value as? String
+        self.valueLabel.text = self.getDisplayValue(value as! Int)
         return value
     }
     
     override func didSelectCell() {
-        print("Open action picker")
         
         ActionSheetStringPicker.show(withTitle: prefItem.displayName, rows: prefItem.displayValues!, initialSelection: curIndex, doneBlock: { [unowned self] (picker, index, value) in
             
-            if let value = value {
-                self.defaultAction(sender: value)
+            let items : [Any] = {
+                if let actualValues = self.prefItem.actualValues {
+                    return actualValues
+                }
+                return self.prefItem.displayValues!
+            }()
+            
+            guard index < items.count else {
+                assertionFailure("No item corresponds to index")
+                return
             }
+            
+        
+            
+            let value = items[index]
+            self.defaultAction(sender: value)
+
             self.curIndex = index
             
         }, cancel: { (picker) in
@@ -315,10 +356,14 @@ class JNPickerCell : JNPrefCell {
 public struct PrefItemSection {
     public let title : String
     public var items : [PrefItem]
+    public var customDelegate : JNPrefCellDelegate?
     
-    public init(title : String, items: [PrefItem]) {
+    public init(title : String, items: [PrefItem], delegate: JNPrefCellDelegate? = nil) {
         self.title = title
         self.items = items
+        if delegate != nil {
+            customDelegate = delegate
+        }
     }
 }
 
@@ -353,11 +398,17 @@ open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate 
     
     override open func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let dataItem = tableData[indexPath.section].items[indexPath.row]
+        let section = tableData[indexPath.section]
+        
+        let dataItem = section.items[indexPath.row]
         
         let cell = tableView.dequeueReusableCell(withIdentifier: dataItem.prefType.rawValue, for: indexPath) as! JNPrefCell
 
-        cell.delegate = self
+        if let customDelegate = section.customDelegate {
+            cell.delegate = customDelegate
+        } else {
+            cell.delegate = self
+        }
         
         cell.prefItem = dataItem
         
