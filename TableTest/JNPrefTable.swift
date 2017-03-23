@@ -19,7 +19,7 @@ public struct PrefItem {
     let displayName : String
     let prefType : PrefTypes
 
-    public var description : String?
+    public let description : String?
     
     private let currentValue : Any?
     
@@ -37,7 +37,7 @@ public struct PrefItem {
     public var displayValues : [Any]?
     public var actualValues : [Any]?
     
-    public init(key: String, displayName: String, prefType: PrefTypes, currentValue : Any?, defaultValue: Any, displayValues: [Any]? = nil, actualValues: [Any]? = nil) {
+    public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : Any?, defaultValue: Any, displayValues: [Any]? = nil, actualValues: [Any]? = nil) {
         self.key = key
         self.displayName = displayName
         self.prefType = prefType
@@ -45,7 +45,7 @@ public struct PrefItem {
         self.currentValue = currentValue
         self.defaultValue = defaultValue
         
-        description = nil
+        self.description = description
         self.displayValues = displayValues
         self.actualValues = actualValues
     }
@@ -65,6 +65,11 @@ public protocol JNPrefCellDelegate {
 class JNPrefCell : UITableViewCell {
     var delegate : JNPrefCellDelegate?
     
+    var mainLabel = UILabel()
+    var descriptionLabel = UILabel()
+    
+    var mainContent = UIView()
+    
     class func registerClasses(onTableView tableView: UITableView) {
         tableView.register(JNStepperCell.self, forCellReuseIdentifier: PrefTypes.intPref.rawValue)
         tableView.register(JNSliderCell.self, forCellReuseIdentifier: PrefTypes.floatPref.rawValue)
@@ -76,20 +81,95 @@ class JNPrefCell : UITableViewCell {
         didSet {
             self.setupCell()
             
-            self.textLabel?.text = prefItem.displayName
+            self.mainLabel.text = prefItem.displayName
         }
     }
     
     override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        self.textLabel?.font = self.defaultTextFont
+        self.textLabel?.font = JNPrefCell.defaultTextFont
         self.selectionStyle = .none
         self.backgroundColor = UIColor.clear
+        
+        self.addMainView()
+        self.addBasicLabels()
     }
     
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         assertionFailure("Not implemented")
+    }
+    
+    func addMainView() {
+        self.addSubview(mainContent)
+        mainContent.translatesAutoresizingMaskIntoConstraints = false
+        
+        let views : [String:UIView] = ["mainContent":mainContent]
+        
+        let metrics : [String:Any] = ["padding":16]
+        
+        var allConstraints = [NSLayoutConstraint]()
+        
+        
+        let verticalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "V:|[mainContent]|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += verticalConstraints
+        
+        let horizontalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "H:|[mainContent]|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += horizontalConstraints
+        
+        NSLayoutConstraint.activate(allConstraints)
+    }
+    
+    func addBasicLabels() {
+        mainLabel.text = "Main"
+        descriptionLabel.text = "Description"
+        
+        mainLabel.font = JNPrefCell.defaultTextFont
+        descriptionLabel.font = JNPrefCell.descriptionTextFont
+        descriptionLabel.textColor = UIColor.darkGray
+        
+        mainLabel.translatesAutoresizingMaskIntoConstraints = false
+        descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        mainContent.addSubview(mainLabel)
+        mainContent.addSubview(descriptionLabel)
+        
+        
+        
+        let views : [String:UIView] = ["mainLabel":mainLabel,"descriptionLabel":descriptionLabel]
+        
+        let metrics : [String:Any] = ["padding":16]
+        
+        var allConstraints = [NSLayoutConstraint]()
+        
+        do {
+            let verticalCenteringConstraint = NSLayoutConstraint(item: mainLabel, attribute: .centerY, relatedBy: .equal, toItem: self, attribute: .centerY, multiplier: 1.0, constant: 0.0)
+            allConstraints += [verticalCenteringConstraint]
+        }
+        
+        let labelVerticalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "V:|[mainLabel]|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += labelVerticalConstraints
+        
+        let labelHorizontalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "H:|-padding-[mainLabel]",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += labelHorizontalConstraints
+        
+        NSLayoutConstraint.activate(allConstraints)
     }
     
     func getValueAndUpdate(_ sender : Any) -> Any {
@@ -113,7 +193,8 @@ class JNPrefCell : UITableViewCell {
 }
 
 extension JNPrefCell {
-    var defaultTextFont : UIFont { return UIFont(name: "AvenirNext-Regular", size: 16)! }
+    static var defaultTextFont : UIFont { return UIFont(name: "AvenirNext-Regular", size: 16)! }
+    static var descriptionTextFont : UIFont { return UIFont(name: "AvenirNext-Regular", size: 12)! }
 }
 
 class JNStepperCell : JNPrefCell {
@@ -134,7 +215,7 @@ class JNStepperCell : JNPrefCell {
     }
     
     override func setupCell() {
-        self.valueLabel.font = self.defaultTextFont
+        self.valueLabel.font = JNPrefCell.defaultTextFont
         if let minValue = prefItem.actualValues?.first as? Int,
             let maxValue = prefItem.actualValues?.last as? Int {
             stepper.minimumValue = Double(minValue)
@@ -194,7 +275,30 @@ class JNSwitchCell : JNPrefCell {
     override func setupCell() {
         optionSwitch.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .valueChanged)
         optionSwitch.isOn = self.prefItem.value as! Bool
-        self.accessoryView = optionSwitch
+        
+        
+        self.addSubview(optionSwitch)
+        optionSwitch.translatesAutoresizingMaskIntoConstraints = false
+        
+        let views : [String:UIView] = ["optionSwitch":optionSwitch]
+        
+        let metrics : [String:Any] = ["padding":16]
+        
+        var allConstraints = [NSLayoutConstraint]()
+        
+        let sliderVerticalCenteringConstraint = NSLayoutConstraint(item: optionSwitch, attribute: .centerY, relatedBy: .equal, toItem: self, attribute: .centerY, multiplier: 1.0, constant: 0.0)
+        allConstraints += [sliderVerticalCenteringConstraint]
+        
+        
+        let sliderHorizontalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "H:[optionSwitch]-padding-|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += sliderHorizontalConstraints
+        
+        NSLayoutConstraint.activate(allConstraints)
+
     }
     
 }
@@ -209,7 +313,7 @@ class JNSliderCell : JNPrefCell {
     }
     
     override func setupCell() {
-        self.valueLabel.font = self.defaultTextFont
+        self.valueLabel.font = JNPrefCell.defaultTextFont
         
         if let minValue = prefItem.actualValues?.first as? Float,
             let maxValue = prefItem.actualValues?.last as? Float {
@@ -287,7 +391,7 @@ class JNPickerCell : JNPrefCell {
     override func setupCell() {
         curIndex = self.indexOfValue(prefItem.value as! Int)
         
-        self.valueLabel.font = self.defaultTextFont
+        self.valueLabel.font = JNPrefCell.defaultTextFont
         
         
         valueLabel.text = self.getDisplayValue(prefItem.value as! Int)
