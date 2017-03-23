@@ -100,32 +100,35 @@ class JNPrefCell : UITableViewCell {
         assertionFailure("Not implemented")
     }
     
+    func prefCellHeight() -> CGFloat {
+        if prefItem.description != nil {
+            return heightWithDescription()
+        } else {
+            return basicHeight()
+        }
+    }
+    
+    internal func basicHeight() -> CGFloat {
+        return 60
+    }
+    
+    internal func heightWithDescription() -> CGFloat {
+        return 100
+    }
+    
+    override func layoutSubviews() {
+        if prefItem.description == nil {
+            mainContent.frame = self.bounds
+            return
+        }
+        mainContent.frame = self.bounds
+
+        //mainContent.frame = CGRect(x: 0, y: 0, width: self.bounds.width, height: self.bounds.height / 2.0)
+        //descriptionLabel.frame = CGRect(x: 0, y: 0, width: self.bounds.width, height: self.bounds.height / 2.0)
+    }
+    
     func addMainView() {
         self.addSubview(mainContent)
-        mainContent.translatesAutoresizingMaskIntoConstraints = false
-        
-        let views : [String:UIView] = ["mainContent":mainContent]
-        
-        let metrics : [String:Any] = ["padding":16]
-        
-        var allConstraints = [NSLayoutConstraint]()
-        
-        
-        let verticalConstraints = NSLayoutConstraint.constraints(
-            withVisualFormat: "V:|[mainContent]|",
-            options: [],
-            metrics: metrics,
-            views: views)
-        allConstraints += verticalConstraints
-        
-        let horizontalConstraints = NSLayoutConstraint.constraints(
-            withVisualFormat: "H:|[mainContent]|",
-            options: [],
-            metrics: metrics,
-            views: views)
-        allConstraints += horizontalConstraints
-        
-        NSLayoutConstraint.activate(allConstraints)
     }
     
     func addBasicLabels() {
@@ -137,14 +140,15 @@ class JNPrefCell : UITableViewCell {
         descriptionLabel.textColor = UIColor.darkGray
         
         mainLabel.translatesAutoresizingMaskIntoConstraints = false
-        descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         
         mainContent.addSubview(mainLabel)
-        mainContent.addSubview(descriptionLabel)
+        
+        //descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(descriptionLabel)
         
         
         
-        let views : [String:UIView] = ["mainLabel":mainLabel,"descriptionLabel":descriptionLabel]
+        let views : [String:UIView] = ["mainLabel":mainLabel]
         
         let metrics : [String:Any] = ["padding":16]
         
@@ -154,13 +158,6 @@ class JNPrefCell : UITableViewCell {
             let verticalCenteringConstraint = NSLayoutConstraint(item: mainLabel, attribute: .centerY, relatedBy: .equal, toItem: self, attribute: .centerY, multiplier: 1.0, constant: 0.0)
             allConstraints += [verticalCenteringConstraint]
         }
-        
-        let labelVerticalConstraints = NSLayoutConstraint.constraints(
-            withVisualFormat: "V:|[mainLabel]|",
-            options: [],
-            metrics: metrics,
-            views: views)
-        allConstraints += labelVerticalConstraints
         
         let labelHorizontalConstraints = NSLayoutConstraint.constraints(
             withVisualFormat: "H:|-padding-[mainLabel]",
@@ -232,8 +229,8 @@ class JNStepperCell : JNPrefCell {
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
         stepper.translatesAutoresizingMaskIntoConstraints = false
         
-        self.addSubview(stepper)
-        self.addSubview(valueLabel)
+        mainContent.addSubview(stepper)
+        mainContent.addSubview(valueLabel)
         
         let views : [String:UIView] = ["stepper":stepper,"valueLabel":valueLabel]
         
@@ -277,7 +274,7 @@ class JNSwitchCell : JNPrefCell {
         optionSwitch.isOn = self.prefItem.value as! Bool
         
         
-        self.addSubview(optionSwitch)
+        mainContent.addSubview(optionSwitch)
         optionSwitch.translatesAutoresizingMaskIntoConstraints = false
         
         let views : [String:UIView] = ["optionSwitch":optionSwitch]
@@ -331,14 +328,14 @@ class JNSliderCell : JNPrefCell {
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
         
-        self.addSubview(valueLabel)
+        mainContent.addSubview(valueLabel)
         
         slider.frame = CGRect.zero
         slider.translatesAutoresizingMaskIntoConstraints = false
         
         slider.translatesAutoresizingMaskIntoConstraints = false
         
-        self.addSubview(slider)
+        mainContent.addSubview(slider)
         
         let views : [String:UIView] = ["slider":slider,"valueLabel":valueLabel]
         
@@ -399,7 +396,7 @@ class JNPickerCell : JNPrefCell {
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
         
-        self.addSubview(valueLabel)
+        mainContent.addSubview(valueLabel)
         
         
         let views : [String:UIView] = ["valueLabel":valueLabel]
