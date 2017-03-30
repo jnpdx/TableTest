@@ -194,6 +194,23 @@ extension JNPrefCell {
     static var descriptionTextFont : UIFont { return UIFont(name: "AvenirNext-Regular", size: 12)! }
 }
 
+class JNButtonCell : JNPrefCell {
+    var button = UIButton(type: .system)
+    
+    override func setupCell() {
+        button.setTitle("Button", for: .normal)
+        button.titleLabel?.font = JNPrefCell.defaultTextFont
+        self.addSubview(button)
+        
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        button.leftAnchor.constraint(equalTo: self.leftAnchor)
+        button.rightAnchor.constraint(equalTo: self.rightAnchor)
+        button.topAnchor.constraint(equalTo: self.topAnchor)
+        button.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+    }
+}
+
 class JNStepperCell : JNPrefCell {
     var stepper = UIStepper()
     var valueLabel = UILabel()
