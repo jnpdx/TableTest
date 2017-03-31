@@ -56,6 +56,8 @@ public enum PrefTypes : String {
     case floatPref
     case intPref
     case radioPref
+    
+    case buttonPref
 }
 
 public protocol JNPrefCellDelegate {
@@ -75,6 +77,7 @@ class JNPrefCell : UITableViewCell {
         tableView.register(JNSliderCell.self, forCellReuseIdentifier: PrefTypes.floatPref.rawValue)
         tableView.register(JNSwitchCell.self, forCellReuseIdentifier: PrefTypes.boolPref.rawValue)
         tableView.register(JNPickerCell.self, forCellReuseIdentifier: PrefTypes.radioPref.rawValue)
+        tableView.register(JNButtonCell.self, forCellReuseIdentifier: PrefTypes.buttonPref.rawValue)
     }
     
     var prefItem : PrefItem! {
@@ -198,16 +201,28 @@ class JNButtonCell : JNPrefCell {
     var button = UIButton(type: .system)
     
     override func setupCell() {
-        button.setTitle("Button", for: .normal)
+        self.mainLabel.isHidden = true
+        button.setTitle(self.prefItem.displayName, for: .normal)
         button.titleLabel?.font = JNPrefCell.defaultTextFont
         self.addSubview(button)
         
         button.translatesAutoresizingMaskIntoConstraints = false
         
-        button.leftAnchor.constraint(equalTo: self.leftAnchor)
-        button.rightAnchor.constraint(equalTo: self.rightAnchor)
-        button.topAnchor.constraint(equalTo: self.topAnchor)
-        button.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+        button.leftAnchor.constraint(equalTo: self.leftAnchor, constant: 16.0).isActive = true
+        button.rightAnchor.constraint(equalTo: self.rightAnchor, constant: -16.0).isActive = true
+        button.topAnchor.constraint(equalTo: self.topAnchor).isActive = true
+        button.bottomAnchor.constraint(equalTo: self.bottomAnchor).isActive = true
+        
+        button.addTarget(self, action: #selector(buttonPressed(sender:)), for: .touchUpInside)
+    }
+    
+    func buttonPressed(sender : UIButton) {
+        self.defaultAction(sender: self)
+    }
+    
+    override func getValueAndUpdate(_ sender: Any) -> Any {
+        //don't need to do anything here
+        return 0
     }
 }
 
@@ -508,7 +523,6 @@ open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate 
     }
 
     override open func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        // #warning Incomplete implementation, return the number of rows
         return tableData[section].items.count
     }
 
