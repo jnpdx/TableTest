@@ -5,7 +5,4 @@ Podfile.lock
 
 *.xcbkptlist
 
-*.xcscheme
-*xcuserdata*
-
 Carthage/*
