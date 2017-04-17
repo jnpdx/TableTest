@@ -36,10 +36,10 @@ public struct PrefItem {
         return currentValue
     }
     
-    public var displayValues : [Any]?
+    public var displayValues : [String]?
     public var actualValues : [Any]?
     
-    public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : Any?, defaultValue: Any, displayValues: [Any]? = nil, actualValues: [Any]? = nil) {
+    public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : Any?, defaultValue: Any, displayValues: [String]? = nil, actualValues: [Any]? = nil) {
         self.key = key
         self.displayName = displayName
         self.prefType = prefType
@@ -239,7 +239,7 @@ class JNStepperCell : JNPrefCell {
     
     func valueLabelText(n : Int) -> String {
         if let displayValues = self.prefItem.displayValues, let valueInts = prefItem.actualValues as? [Int], let indexOfCurrentValue = valueInts.index(of: n){
-            return "\(displayValues[indexOfCurrentValue])"
+            return displayValues[indexOfCurrentValue]
         } else {
             return "\(n)"
         }
@@ -416,7 +416,7 @@ class JNPickerCell : JNPrefCell {
     }
     
     func getDisplayValue(_ value: Int) -> String {
-        return "\(prefItem.displayValues![self.indexOfValue(value)])"
+        return prefItem.displayValues![self.indexOfValue(value)]
     }
     
     override func setupCell() {
