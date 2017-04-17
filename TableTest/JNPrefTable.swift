@@ -233,16 +233,16 @@ class JNStepperCell : JNPrefCell {
     var valueLabel = UILabel()
     
     override func getValueAndUpdate(_ sender: Any) -> Any {
-//        if let displayValues = self.prefItem.displayValues {
-//            //find the right index of it
-//            //TODO: use displayValues
-//            valueLabel.text = "\(Int(stepper.value))"
-//            //valueLabel.text = "\(displayValues[prefItem.value as! Int])"
-//        } else {
-//            valueLabel.text = "\(Int(stepper.value))"
-//        }
-        valueLabel.text = "\(Int(stepper.value))"
+        valueLabel.text = valueLabelText(n: Int(stepper.value))
         return Int(stepper.value)
+    }
+    
+    func valueLabelText(n : Int) -> String {
+        if let displayValues = self.prefItem.displayValues, let valueInts = prefItem.actualValues as? [Int], let indexOfCurrentValue = valueInts.index(of: n){
+            return "\(displayValues[indexOfCurrentValue])"
+        } else {
+            return "\(n)"
+        }
     }
     
     override func setupCell() {
@@ -257,7 +257,7 @@ class JNStepperCell : JNPrefCell {
         stepper.value = Double(prefItem.value as! Int)
         
         stepper.sizeToFit()
-        valueLabel.text = "\(prefItem.value)"
+        valueLabel.text = valueLabelText(n: prefItem.value as! Int)
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
