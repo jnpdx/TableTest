@@ -12,8 +12,77 @@ import UIKit
 import CoreActionSheetPicker
 
 
-public enum PrefResult {
-    case noValue
+public struct PrefValue {
+    
+    let value : PrefValueTypes
+    
+    static func bool(_ v : Bool) -> PrefValue {
+        return PrefValue(value: .bool(value: v))
+    }
+    
+    static func int(_ v : Int) -> PrefValue {
+        return PrefValue(value: .int(value: v))
+    }
+
+    static func float(_ v : Float) -> PrefValue {
+        return PrefValue(value: .float(value: v))
+    }
+    
+    static func intArray(_ a : [Int]) -> [PrefValue] {
+        return a.map { (i) -> PrefValue in
+            PrefValue.int(i)
+        }
+    }
+    
+    enum PrefValueTypes {
+        case bool(value : Bool)
+        case int(value : Int)
+        case float(value : Float)
+        case noValue
+    }
+    
+    var isNoValue : Bool {
+        switch value {
+        case .noValue:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    var boolValue : Bool {
+        switch value {
+        case .bool(let value):
+            return value
+        default:
+            assertionFailure("Incorrect type")
+            return false
+        }
+    }
+    
+    var intValue : Int {
+        switch value {
+        case .int(let value):
+            return value
+        default:
+            assertionFailure("Incorrect type")
+            return -1
+        }
+    }
+    
+    var floatValue : Float {
+        switch value {
+        case .float(let value):
+            return value
+        default:
+            assertionFailure("Incorrect type")
+            return -1
+        }
+    }
+    
+    static var noValue : PrefValue {
+        return PrefValue(value: PrefValueTypes.noValue)
+    }
 }
 
 public struct PrefItem {
@@ -23,13 +92,13 @@ public struct PrefItem {
 
     public let description : String?
     
-    private let currentValue : Any?
+    private let currentValue : PrefValue?
     
-    private let defaultValue : Any
+    private let defaultValue : PrefValue
     
-    var value : Any {
+    var value : PrefValue {
         guard let currentValue = currentValue,
-            currentValue as? PrefResult != PrefResult.noValue
+            currentValue.isNoValue
         else {
             return defaultValue
         }
@@ -37,9 +106,9 @@ public struct PrefItem {
     }
     
     public var displayValues : [String]?
-    public var actualValues : [Any]?
+    public var actualValues : [PrefValue]?
     
-    public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : Any?, defaultValue: Any, displayValues: [String]? = nil, actualValues: [Any]? = nil) {
+    public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : PrefValue?, defaultValue: PrefValue, displayValues: [String]? = nil, actualValues: [PrefValue]? = nil) {
         self.key = key
         self.displayName = displayName
         self.prefType = prefType
@@ -63,7 +132,7 @@ public enum PrefTypes : String {
 }
 
 public protocol JNPrefCellDelegate {
-    func prefCellValueChanged(value : Any, withPrefItem prefItem : PrefItem)
+    func prefCellValueChanged(value : PrefValue, withPrefItem prefItem : PrefItem)
 }
 
 class JNPrefCell : UITableViewCell {
@@ -174,9 +243,9 @@ class JNPrefCell : UITableViewCell {
         NSLayoutConstraint.activate(allConstraints)
     }
     
-    func getValueAndUpdate(_ sender : Any) -> Any {
+    func getValueAndUpdate(_ sender : Any) -> PrefValue {
         assertionFailure("Implement in subclass")
-        return 0
+        return PrefValue.noValue
     }
     
     func defaultAction(sender : Any) {
@@ -222,9 +291,9 @@ class JNButtonCell : JNPrefCell {
         self.defaultAction(sender: self)
     }
     
-    override func getValueAndUpdate(_ sender: Any) -> Any {
+    override func getValueAndUpdate(_ sender: Any) -> PrefValue {
         //don't need to do anything here
-        return 0
+        return PrefValue.noValue
     }
 }
 
@@ -232,32 +301,33 @@ class JNStepperCell : JNPrefCell {
     var stepper = UIStepper()
     var valueLabel = UILabel()
     
-    override func getValueAndUpdate(_ sender: Any) -> Any {
+    override func getValueAndUpdate(_ sender: Any) -> PrefValue {
         valueLabel.text = valueLabelText(n: Int(stepper.value))
-        return Int(stepper.value)
+        return PrefValue.int(Int(stepper.value))
     }
     
     func valueLabelText(n : Int) -> String {
-        if let displayValues = self.prefItem.displayValues, let valueInts = prefItem.actualValues as? [Int], let indexOfCurrentValue = valueInts.index(of: n){
-            return displayValues[indexOfCurrentValue]
-        } else {
-            return "\(n)"
-        }
+        //TODO: Fix this again
+//        if let displayValues = self.prefItem.displayValues, let valueInts = prefItem.actualValues {
+//            let indexOfCurrentValue = valueInts.index(of: n)
+//            return displayValues[indexOfCurrentValue]
+//        }
+        return "\(n)"
     }
     
     override func setupCell() {
         self.valueLabel.font = JNPrefCell.defaultTextFont
-        if let minValue = prefItem.actualValues?.first as? Int,
-            let maxValue = prefItem.actualValues?.last as? Int {
+        if let minValue = prefItem.actualValues?.first?.intValue,
+            let maxValue = prefItem.actualValues?.last?.intValue {
             stepper.minimumValue = Double(minValue)
             stepper.maximumValue = Double(maxValue)
         }
         
         stepper.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .valueChanged)
-        stepper.value = Double(prefItem.value as! Int)
+        stepper.value = Double(prefItem.value.intValue)
         
         stepper.sizeToFit()
-        valueLabel.text = valueLabelText(n: prefItem.value as! Int)
+        valueLabel.text = valueLabelText(n: prefItem.value.intValue)
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -299,13 +369,13 @@ class JNSwitchCell : JNPrefCell {
     
     var optionSwitch = UISwitch()
     
-    override func getValueAndUpdate(_ sender: Any) -> Any {
-        return optionSwitch.isOn
+    override func getValueAndUpdate(_ sender: Any) -> PrefValue {
+        return PrefValue.bool(optionSwitch.isOn)
     }
     
     override func setupCell() {
         optionSwitch.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .valueChanged)
-        optionSwitch.isOn = self.prefItem.value as! Bool
+        optionSwitch.isOn = self.prefItem.value.boolValue
         
         
         mainContent.addSubview(optionSwitch)
@@ -338,21 +408,21 @@ class JNSliderCell : JNPrefCell {
     var slider = UISlider()
     var valueLabel = UILabel()
     
-    override func getValueAndUpdate(_ sender: Any) -> Any {
+    override func getValueAndUpdate(_ sender: Any) -> PrefValue {
         self.valueLabel.text = "\(slider.value)"
-        return slider.value
+        return PrefValue.float(slider.value)
     }
     
     override func setupCell() {
         self.valueLabel.font = JNPrefCell.defaultTextFont
         
-        if let minValue = prefItem.actualValues?.first as? Float,
-            let maxValue = prefItem.actualValues?.last as? Float {
+        if let minValue = prefItem.actualValues?.first?.floatValue,
+            let maxValue = prefItem.actualValues?.last?.floatValue {
             slider.minimumValue = minValue
             slider.maximumValue = maxValue
         }
         
-        slider.value = self.prefItem.value as! Float
+        slider.value = self.prefItem.value.floatValue
         
         slider.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .touchUpInside)
         slider.addTarget(self, action: #selector(self.defaultAction(sender:)), for: .touchUpOutside)
@@ -408,11 +478,13 @@ class JNPickerCell : JNPrefCell {
     var curIndex = 0
     
     func indexOfValue(_ value : Int) -> Int {
-        if let ints = prefItem.actualValues as? [Int] {
-            return ints.index(of: value) ?? 0
-        } else {
-            return 0
-        }
+        //TODO: implement this again
+//        if let ints = prefItem.actualValues as? [Int] {
+//            return ints.index(of: value) ?? 0
+//        } else {
+//            return 0
+//        }
+        return 0
     }
     
     func getDisplayValue(_ value: Int) -> String {
@@ -420,12 +492,12 @@ class JNPickerCell : JNPrefCell {
     }
     
     override func setupCell() {
-        curIndex = self.indexOfValue(prefItem.value as! Int)
+        curIndex = self.indexOfValue(prefItem.value.intValue)
         
         self.valueLabel.font = JNPrefCell.defaultTextFont
         
         
-        valueLabel.text = self.getDisplayValue(prefItem.value as! Int)
+        valueLabel.text = self.getDisplayValue(prefItem.value.intValue)
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -456,9 +528,9 @@ class JNPickerCell : JNPrefCell {
         NSLayoutConstraint.activate(allConstraints)
     }
     
-    override func getValueAndUpdate(_ value: Any) -> Any {
+    override func getValueAndUpdate(_ value: Any) -> PrefValue {
         self.valueLabel.text = self.getDisplayValue(value as! Int)
-        return value
+        return PrefValue.int(value as! Int)
     }
     
     override func didSelectCell() {
@@ -556,7 +628,7 @@ open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate 
         cell.didSelectCell()
     }
  
-    open func prefCellValueChanged(value: Any, withPrefItem prefItem: PrefItem) {
+    open func prefCellValueChanged(value: PrefValue, withPrefItem prefItem: PrefItem) {
         print("Delegate method called for \(prefItem.displayName) = \(value)")
     }
 }
@@ -604,7 +676,7 @@ open class JNPrefTableInterface : NSObject, UITableViewDataSource, UITableViewDe
         cell.didSelectCell()
     }
     
-    open func prefCellValueChanged(value: Any, withPrefItem prefItem: PrefItem) {
+    open func prefCellValueChanged(value: PrefValue, withPrefItem prefItem: PrefItem) {
         print("Delegate method called for \(prefItem.displayName) = \(value)")
     }
     
