@@ -80,6 +80,19 @@ public struct PrefValue {
         }
     }
     
+    var valueForDefaults : Any? {
+        switch value {
+        case .bool(let value):
+            return value
+        case .int(let value):
+            return value
+        case .float(let value):
+            return value
+        case .noValue:
+            return nil
+        }
+    }
+    
     static var noValue : PrefValue {
         return PrefValue(value: .noValue)
     }
@@ -538,12 +551,10 @@ class JNPickerCell : JNPrefCell {
         
         ActionSheetStringPicker.show(withTitle: prefItem.displayName, rows: prefItem.displayValues!, initialSelection: curIndex, doneBlock: { [unowned self] (picker, index, value) in
             
-            let items : [Any] = {
-                if let actualValues = self.prefItem.actualValues {
-                    return actualValues
-                }
-                return self.prefItem.displayValues!
-            }()
+            guard let items = self.prefItem.actualValues else {
+                assertionFailure("No items")
+                return
+            }
             
             guard index < items.count else {
                 assertionFailure("No item corresponds to index")
@@ -552,7 +563,7 @@ class JNPickerCell : JNPrefCell {
             
         
             
-            let value = items[index]
+            let value = items[index].intValue
             self.defaultAction(sender: value)
 
             self.curIndex = index
