@@ -110,7 +110,6 @@ public struct PrefItem {
     public var displayValues : [String]?
     public var actualValues : [PrefValue]?
     
-    //TODO: get default value from currentValue .value property
     public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : PrefValue, displayValues: [String]? = nil, actualValues: [PrefValue]? = nil) {
         self.key = key
         self.displayName = displayName
@@ -480,13 +479,14 @@ class JNPickerCell : JNPrefCell {
     var curIndex = 0
     
     func indexOfValue(_ value : Int) -> Int {
-        //TODO: implement this again
-//        if let ints = prefItem.actualValues as? [Int] {
-//            return ints.index(of: value) ?? 0
-//        } else {
-//            return 0
-//        }
-        return 0
+        
+        guard let index = prefItem.actualValues?.index(where: { (prefValue) -> Bool in
+            return prefValue.intValue == value
+        }) else {
+            return 0
+        }
+        
+        return index
     }
     
     func getDisplayValue(_ value: Int) -> String {
