@@ -35,9 +35,9 @@ public struct PrefValue {
     }
     
     enum PrefValueTypes {
-        case bool(value : Bool)
-        case int(value : Int)
-        case float(value : Float)
+        case bool(value: Bool)
+        case int(value: Int)
+        case float(value: Float)
         case noValue
     }
     
@@ -55,7 +55,7 @@ public struct PrefValue {
         case .bool(let value):
             return value
         default:
-            assertionFailure("Incorrect type")
+            assertionFailure("Wrong type")
             return false
         }
     }
@@ -65,7 +65,7 @@ public struct PrefValue {
         case .int(let value):
             return value
         default:
-            assertionFailure("Incorrect type")
+            assertionFailure("Wrong type")
             return -1
         }
     }
@@ -75,13 +75,13 @@ public struct PrefValue {
         case .float(let value):
             return value
         default:
-            assertionFailure("Incorrect type")
+            assertionFailure("Wrong type")
             return -1
         }
     }
     
     static var noValue : PrefValue {
-        return PrefValue(value: PrefValueTypes.noValue)
+        return PrefValue(value: .noValue)
     }
 }
 
@@ -94,11 +94,11 @@ public struct PrefItem {
     
     private let currentValue : PrefValue?
     
-    private let defaultValue : PrefValue
+    public let defaultValue : PrefValue
     
     var value : PrefValue {
         guard let currentValue = currentValue,
-            currentValue.isNoValue
+            !currentValue.isNoValue
         else {
             return defaultValue
         }
@@ -108,6 +108,7 @@ public struct PrefItem {
     public var displayValues : [String]?
     public var actualValues : [PrefValue]?
     
+    //TODO: get default value from currentValue .value property
     public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : PrefValue?, defaultValue: PrefValue, displayValues: [String]? = nil, actualValues: [PrefValue]? = nil) {
         self.key = key
         self.displayName = displayName
