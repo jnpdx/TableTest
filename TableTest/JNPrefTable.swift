@@ -105,30 +105,18 @@ public struct PrefItem {
 
     public let description : String?
     
-    private let currentValue : PrefValue?
-    
-    public let defaultValue : PrefValue
-    
-    var value : PrefValue {
-        guard let currentValue = currentValue,
-            !currentValue.isNoValue
-        else {
-            return defaultValue
-        }
-        return currentValue
-    }
+    public let value : PrefValue
     
     public var displayValues : [String]?
     public var actualValues : [PrefValue]?
     
     //TODO: get default value from currentValue .value property
-    public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : PrefValue?, defaultValue: PrefValue, displayValues: [String]? = nil, actualValues: [PrefValue]? = nil) {
+    public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : PrefValue, displayValues: [String]? = nil, actualValues: [PrefValue]? = nil) {
         self.key = key
         self.displayName = displayName
         self.prefType = prefType
         
-        self.currentValue = currentValue
-        self.defaultValue = defaultValue
+        self.value = currentValue
         
         self.description = description
         self.displayValues = displayValues
