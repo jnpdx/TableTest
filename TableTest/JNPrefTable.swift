@@ -308,11 +308,13 @@ class JNStepperCell : JNPrefCell {
     }
     
     func valueLabelText(n : Int) -> String {
-        //TODO: Fix this again
-//        if let displayValues = self.prefItem.displayValues, let valueInts = prefItem.actualValues {
-//            let indexOfCurrentValue = valueInts.index(of: n)
-//            return displayValues[indexOfCurrentValue]
-//        }
+        
+        if let actualValues = prefItem.actualValues, let displayValues = prefItem.displayValues, let index = actualValues.index(where: { (prefVal) -> Bool in
+            return prefVal.intValue == n
+        }) {
+            return displayValues[index]
+        }
+        
         return "\(n)"
     }
     
