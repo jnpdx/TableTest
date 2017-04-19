@@ -28,9 +28,19 @@ public struct PrefValue {
         return PrefValue(value: .float(value: v))
     }
     
+    static func string(_ v: String) -> PrefValue {
+        return PrefValue(value: .string(value: v))
+    }
+    
     static func intArray(_ a : [Int]) -> [PrefValue] {
         return a.map { (i) -> PrefValue in
             PrefValue.int(i)
+        }
+    }
+    
+    static func stringArray(_ a : [String]) -> [PrefValue] {
+        return a.map { (i) -> PrefValue in
+            PrefValue.string(i)
         }
     }
     
@@ -38,6 +48,7 @@ public struct PrefValue {
         case bool(value: Bool)
         case int(value: Int)
         case float(value: Float)
+        case string(value : String)
         case noValue
     }
     
@@ -80,6 +91,16 @@ public struct PrefValue {
         }
     }
     
+    var stringValue : String {
+        switch value {
+        case .string(let value):
+            return value
+        default:
+            assertionFailure("Wrong type")
+            return ""
+        }
+    }
+    
     var valueForDefaults : Any? {
         switch value {
         case .bool(let value):
@@ -87,6 +108,8 @@ public struct PrefValue {
         case .int(let value):
             return value
         case .float(let value):
+            return value
+        case .string(let value):
             return value
         case .noValue:
             return nil
@@ -96,6 +119,7 @@ public struct PrefValue {
     static var noValue : PrefValue {
         return PrefValue(value: .noValue)
     }
+    
 }
 
 public struct PrefItem {
@@ -480,28 +504,40 @@ class JNPickerCell : JNPrefCell {
     var valueLabel = UILabel()
     var curIndex = 0
     
-    func indexOfValue(_ value : Int) -> Int {
+    func indexOfValue(_ value : PrefValue) -> Int {
         
-        guard let index = prefItem.actualValues?.index(where: { (prefValue) -> Bool in
-            return prefValue.intValue == value
-        }) else {
+        switch value.value {
+        case .int( _):
+            guard let index = prefItem.actualValues?.index(where: { (prefValue) -> Bool in
+                return prefValue.intValue == value.intValue
+            }) else {
+                return 0
+            }
+            return index
+        case .string( _):
+            guard let index = prefItem.actualValues?.index(where: { (prefValue) -> Bool in
+                return prefValue.stringValue == value.stringValue
+            }) else {
+                return 0
+            }
+            return index
+        default:
+            assertionFailure("Wrong type to do comparison")
             return 0
         }
-        
-        return index
     }
     
-    func getDisplayValue(_ value: Int) -> String {
-        return prefItem.displayValues![self.indexOfValue(value)]
+    func getDisplayValue(_ index: Int) -> String {
+        return prefItem.displayValues![index]
     }
     
     override func setupCell() {
-        curIndex = self.indexOfValue(prefItem.value.intValue)
+        curIndex = self.indexOfValue(prefItem.value)
         
         self.valueLabel.font = JNPrefCell.defaultTextFont
         
         
-        valueLabel.text = self.getDisplayValue(prefItem.value.intValue)
+        valueLabel.text = self.getDisplayValue(curIndex)
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -533,8 +569,12 @@ class JNPickerCell : JNPrefCell {
     }
     
     override func getValueAndUpdate(_ value: Any) -> PrefValue {
-        self.valueLabel.text = self.getDisplayValue(value as! Int)
-        return PrefValue.int(value as! Int)
+        guard let prefValue = value as? PrefValue else {
+            assertionFailure("Expected PrefValue")
+            return PrefValue.noValue
+        }
+        self.valueLabel.text = self.getDisplayValue(self.curIndex)
+        return prefValue
     }
     
     override func didSelectCell() {
@@ -551,12 +591,10 @@ class JNPickerCell : JNPrefCell {
                 return
             }
             
-        
-            
-            let value = items[index].intValue
-            self.defaultAction(sender: value)
-
+            //must set the curIndex before the defaultAction call
             self.curIndex = index
+            
+            self.defaultAction(sender: items[index])
             
         }, cancel: { (picker) in
             
