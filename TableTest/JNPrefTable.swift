@@ -129,10 +129,12 @@ public struct PrefItem {
 
     public let description : String?
     
-    public let value : PrefValue
+    public var value : PrefValue
     
     public var displayValues : [String]?
     public var actualValues : [PrefValue]?
+    
+    public var dataValidation : ((PrefValue) -> Bool)?
     
     public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : PrefValue, displayValues: [String]? = nil, actualValues: [PrefValue]? = nil) {
         self.key = key
@@ -144,6 +146,12 @@ public struct PrefItem {
         self.description = description
         self.displayValues = displayValues
         self.actualValues = actualValues
+        
+        self.dataValidation = {
+            (newValue : PrefValue) in
+            
+            return true
+        }
     }
 }
 
@@ -268,13 +276,31 @@ class JNPrefCell : UITableViewCell {
         NSLayoutConstraint.activate(allConstraints)
     }
     
-    func getValueAndUpdate(_ sender : Any) -> PrefValue {
+    func getValue(_ sender : Any) -> PrefValue {
         assertionFailure("Implement in subclass")
         return PrefValue.noValue
     }
     
+    func updateValue(newValue : PrefValue) {
+        assertionFailure("Implement in subclass")
+    }
+    
     func defaultAction(sender : Any) {
-        let newValue = self.getValueAndUpdate(sender)
+        let oldValue = self.prefItem.value
+        let newValue = self.getValue(sender)
+        
+        if let validationClosure = prefItem.dataValidation {
+            if validationClosure(newValue) {
+                self.updateValue(newValue: newValue)
+            } else {
+                print("Reverting to old value for \(prefItem.key)")
+                self.updateValue(newValue: oldValue)
+                return
+            }
+        } else {
+            self.updateValue(newValue: newValue)
+        }
+        
         print("\(prefItem.key) \"\(prefItem.displayName)\" new value: \(newValue)")
         delegate?.prefCellValueChanged(value: newValue, withPrefItem: prefItem)
     }
@@ -316,9 +342,13 @@ class JNButtonCell : JNPrefCell {
         self.defaultAction(sender: self)
     }
     
-    override func getValueAndUpdate(_ sender: Any) -> PrefValue {
+    override func getValue(_ sender: Any) -> PrefValue {
         //don't need to do anything here
         return PrefValue.noValue
+    }
+    
+    override func updateValue(newValue: PrefValue) {
+        //don't need to do anything here
     }
 }
 
@@ -326,9 +356,13 @@ class JNStepperCell : JNPrefCell {
     var stepper = UIStepper()
     var valueLabel = UILabel()
     
-    override func getValueAndUpdate(_ sender: Any) -> PrefValue {
-        valueLabel.text = valueLabelText(n: Int(stepper.value))
+    override func getValue(_ sender: Any) -> PrefValue {
+        
         return PrefValue.int(Int(stepper.value))
+    }
+    
+    override func updateValue(newValue: PrefValue) {
+        valueLabel.text = valueLabelText(n: newValue.intValue)
     }
     
     func valueLabelText(n : Int) -> String {
@@ -396,8 +430,12 @@ class JNSwitchCell : JNPrefCell {
     
     var optionSwitch = UISwitch()
     
-    override func getValueAndUpdate(_ sender: Any) -> PrefValue {
+    override func getValue(_ sender: Any) -> PrefValue {
         return PrefValue.bool(optionSwitch.isOn)
+    }
+    
+    override func updateValue(newValue: PrefValue) {
+        optionSwitch.isOn = newValue.boolValue
     }
     
     override func setupCell() {
@@ -435,9 +473,12 @@ class JNSliderCell : JNPrefCell {
     var slider = UISlider()
     var valueLabel = UILabel()
     
-    override func getValueAndUpdate(_ sender: Any) -> PrefValue {
-        self.valueLabel.text = "\(slider.value)"
+    override func getValue(_ sender: Any) -> PrefValue {
         return PrefValue.float(slider.value)
+    }
+    
+    override func updateValue(newValue: PrefValue) {
+        self.valueLabel.text = "\(newValue.floatValue)"
     }
     
     override func setupCell() {
@@ -502,7 +543,6 @@ class JNSliderCell : JNPrefCell {
 
 class JNPickerCell : JNPrefCell {
     var valueLabel = UILabel()
-    var curIndex = 0
     
     func indexOfValue(_ value : PrefValue) -> Int {
         
@@ -532,12 +572,10 @@ class JNPickerCell : JNPrefCell {
     }
     
     override func setupCell() {
-        curIndex = self.indexOfValue(prefItem.value)
-        
         self.valueLabel.font = JNPrefCell.defaultTextFont
         
         
-        valueLabel.text = self.getDisplayValue(curIndex)
+        valueLabel.text = self.getDisplayValue(self.indexOfValue(prefItem.value))
         valueLabel.sizeToFit()
         
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -568,18 +606,27 @@ class JNPickerCell : JNPrefCell {
         NSLayoutConstraint.activate(allConstraints)
     }
     
-    override func getValueAndUpdate(_ value: Any) -> PrefValue {
+    override func getValue(_ value: Any) -> PrefValue {
         guard let prefValue = value as? PrefValue else {
             assertionFailure("Expected PrefValue")
             return PrefValue.noValue
         }
-        self.valueLabel.text = self.getDisplayValue(self.curIndex)
+        
         return prefValue
+    }
+    
+    override func updateValue(newValue: PrefValue) {
+        //fix this so it can be rolled back
+        self.prefItem.value = newValue
+        let index = self.indexOfValue(newValue)
+        self.valueLabel.text = self.getDisplayValue(index)
     }
     
     override func didSelectCell() {
         
-        ActionSheetStringPicker.show(withTitle: prefItem.displayName, rows: prefItem.displayValues!, initialSelection: curIndex, doneBlock: { [unowned self] (picker, index, value) in
+        let selectedIndex = self.indexOfValue(prefItem.value)
+        
+        ActionSheetStringPicker.show(withTitle: prefItem.displayName, rows: prefItem.displayValues!, initialSelection: selectedIndex, doneBlock: { [unowned self] (picker, index, value) in
             
             guard let items = self.prefItem.actualValues else {
                 assertionFailure("No items")
@@ -590,9 +637,6 @@ class JNPickerCell : JNPrefCell {
                 assertionFailure("No item corresponds to index")
                 return
             }
-            
-            //must set the curIndex before the defaultAction call
-            self.curIndex = index
             
             self.defaultAction(sender: items[index])
             
