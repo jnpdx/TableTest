@@ -122,6 +122,13 @@ public struct PrefValue {
     
 }
 
+public enum ValidationResult {
+    case passed
+    case failed(message : String)
+}
+
+public typealias ValidationClosure = ((PrefValue) -> ValidationResult)
+
 public struct PrefItem {
     public let key : String
     let displayName : String
@@ -134,9 +141,10 @@ public struct PrefItem {
     public var displayValues : [String]?
     public var actualValues : [PrefValue]?
     
-    public var dataValidation : ((PrefValue) -> Bool)?
     
-    public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : PrefValue, displayValues: [String]? = nil, actualValues: [PrefValue]? = nil) {
+    public var dataValidation : ValidationClosure?
+    
+    public init(key: String, displayName: String, description: String?,prefType: PrefTypes, currentValue : PrefValue, displayValues: [String]? = nil, actualValues: [PrefValue]? = nil, dataValidation : ValidationClosure? = nil) {
         self.key = key
         self.displayName = displayName
         self.prefType = prefType
@@ -147,11 +155,7 @@ public struct PrefItem {
         self.displayValues = displayValues
         self.actualValues = actualValues
         
-        self.dataValidation = {
-            (newValue : PrefValue) in
-            
-            return true
-        }
+        self.dataValidation = dataValidation
     }
 }
 
@@ -166,6 +170,7 @@ public enum PrefTypes : String {
 
 public protocol JNPrefCellDelegate {
     func prefCellValueChanged(value : PrefValue, withPrefItem prefItem : PrefItem)
+    func displayErrorMessage(message: String)
 }
 
 class JNPrefCell : UITableViewCell {
@@ -290,11 +295,13 @@ class JNPrefCell : UITableViewCell {
         let newValue = self.getValue(sender)
         
         if let validationClosure = prefItem.dataValidation {
-            if validationClosure(newValue) {
+            switch validationClosure(newValue) {
+            case .passed:
                 self.updateValue(newValue: newValue)
-            } else {
+            case .failed(let message):
                 print("Reverting to old value for \(prefItem.key)")
                 self.updateValue(newValue: oldValue)
+                delegate?.displayErrorMessage(message: message)
                 return
             }
         } else {
@@ -715,6 +722,10 @@ open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate 
     open func prefCellValueChanged(value: PrefValue, withPrefItem prefItem: PrefItem) {
         print("Delegate method called for \(prefItem.displayName) = \(value)")
     }
+    
+    open func displayErrorMessage(message: String) {
+        print("Error: \(message)")
+    }
 }
 
 open class JNPrefTableInterface : NSObject, UITableViewDataSource, UITableViewDelegate, JNPrefCellDelegate {
@@ -764,5 +775,8 @@ open class JNPrefTableInterface : NSObject, UITableViewDataSource, UITableViewDe
         print("Delegate method called for \(prefItem.displayName) = \(value)")
     }
     
+    public func displayErrorMessage(message: String) {
+        print("Error: \(message)")
+    }
 }
 
