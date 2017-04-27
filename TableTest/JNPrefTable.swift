@@ -559,7 +559,7 @@ class JNRangeSliderCell : JNPrefCell {
         }
         
         self.valueLabel.text = "\(displayMin) - \(displayMax)"
-        return PrefValue.intRange((payload.minVal,payload.maxVal)) //TODO: send both values
+        return PrefValue.intRange((payload.minVal,payload.maxVal))
     }
     
     override func setupCell() {
