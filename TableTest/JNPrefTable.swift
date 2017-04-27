@@ -628,7 +628,7 @@ class JNRangeSliderCell : JNPrefCell {
 extension JNRangeSliderCell : TTRangeSliderDelegate {
     func rangeSlider(_ sender: TTRangeSlider!, didChangeSelectedMinimumValue selectedMinimum: Float, andMaximumValue selectedMaximum: Float) {
         print("Delegate")
-        self.getValueAndUpdate(UpdatePayload(minVal: Int(sender.selectedMinimum), maxVal: Int(sender.selectedMaximum)))
+        _ = self.getValueAndUpdate(UpdatePayload(minVal: Int(sender.selectedMinimum), maxVal: Int(sender.selectedMaximum)))
     }
     
     func didEndTouches(in sender: TTRangeSlider!) {
