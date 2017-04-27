@@ -23,6 +23,10 @@ public struct PrefValue {
     static func int(_ v : Int) -> PrefValue {
         return PrefValue(value: .int(value: v))
     }
+    
+    static func intRange(_ v : (Int,Int)) -> PrefValue {
+        return PrefValue(value: .intRange(value: v))
+    }
 
     static func float(_ v : Float) -> PrefValue {
         return PrefValue(value: .float(value: v))
@@ -47,6 +51,7 @@ public struct PrefValue {
     enum PrefValueTypes {
         case bool(value: Bool)
         case int(value: Int)
+        case intRange(value: (Int, Int))
         case float(value: Float)
         case string(value : String)
         case noValue
@@ -81,6 +86,16 @@ public struct PrefValue {
         }
     }
     
+    var intRangeValue : (Int, Int) {
+        switch value {
+        case .intRange(let value):
+            return value
+        default:
+            assertionFailure("Wrong type")
+            return (-1,-1)
+        }
+    }
+    
     var floatValue : Float {
         switch value {
         case .float(let value):
@@ -107,6 +122,8 @@ public struct PrefValue {
             return value
         case .int(let value):
             return value
+        case .intRange(let value):
+            return [value.0,value.1]
         case .float(let value):
             return value
         case .string(let value):
@@ -152,6 +169,7 @@ public enum PrefTypes : String {
     case floatPref
     case intPref
     case radioPref
+    case rangePref
     
     case buttonPref
 }
@@ -173,6 +191,7 @@ class JNPrefCell : UITableViewCell {
         tableView.register(JNSliderCell.self, forCellReuseIdentifier: PrefTypes.floatPref.rawValue)
         tableView.register(JNSwitchCell.self, forCellReuseIdentifier: PrefTypes.boolPref.rawValue)
         tableView.register(JNPickerCell.self, forCellReuseIdentifier: PrefTypes.radioPref.rawValue)
+        tableView.register(JNRangeSliderCell.self, forCellReuseIdentifier: PrefTypes.rangePref.rawValue)
         tableView.register(JNButtonCell.self, forCellReuseIdentifier: PrefTypes.buttonPref.rawValue)
     }
     
@@ -290,6 +309,7 @@ class JNPrefCell : UITableViewCell {
 
 extension JNPrefCell {
     static var defaultTextFont : UIFont { return UIFont(name: "AvenirNext-Regular", size: 16)! }
+    static var boldTextFont : UIFont { return UIFont(name: "AvenirNext-Medium", size: 16)! }
     static var descriptionTextFont : UIFont { return UIFont(name: "AvenirNext-Regular", size: 12)! }
 }
 
@@ -343,7 +363,7 @@ class JNStepperCell : JNPrefCell {
     }
     
     override func setupCell() {
-        self.valueLabel.font = JNPrefCell.defaultTextFont
+        self.valueLabel.font = JNPrefCell.boldTextFont
         if let minValue = prefItem.actualValues?.first?.intValue,
             let maxValue = prefItem.actualValues?.last?.intValue {
             stepper.minimumValue = Double(minValue)
@@ -441,7 +461,7 @@ class JNSliderCell : JNPrefCell {
     }
     
     override func setupCell() {
-        self.valueLabel.font = JNPrefCell.defaultTextFont
+        self.valueLabel.font = JNPrefCell.boldTextFont
         
         if let minValue = prefItem.actualValues?.first?.floatValue,
             let maxValue = prefItem.actualValues?.last?.floatValue {
@@ -500,6 +520,124 @@ class JNSliderCell : JNPrefCell {
     }
 }
 
+class JNRangeSliderCell : JNPrefCell {
+    var valueLabel = UILabel()
+    var slider = TTRangeSlider()
+    
+    struct UpdatePayload {
+        let minVal : Int
+        let maxVal : Int
+    }
+    
+    override func getValueAndUpdate(_ sender: Any) -> PrefValue {
+        guard let payload = sender as? UpdatePayload else {
+            assertionFailure("Wrong type")
+            return PrefValue.noValue
+        }
+        
+        //get the corresponding display values
+        guard let indexOfMin = prefItem.actualValues?.index(where: { (prefValue) -> Bool in
+            return prefValue.intValue == payload.minVal
+        }) else {
+            return PrefValue.noValue
+        }
+        
+        guard let indexOfMax = prefItem.actualValues?.index(where: { (prefValue) -> Bool in
+            return prefValue.intValue == payload.maxVal
+        }) else {
+            return PrefValue.noValue
+        }
+        
+        guard let displayMin = prefItem.displayValues?[indexOfMin] else {
+            assertionFailure("No display value")
+            return PrefValue.noValue
+        }
+        
+        guard let displayMax = prefItem.displayValues?[indexOfMax] else {
+            assertionFailure("No display value")
+            return PrefValue.noValue
+        }
+        
+        self.valueLabel.text = "\(displayMin) - \(displayMax)"
+        return PrefValue.intRange((payload.minVal,payload.maxVal)) //TODO: send both values
+    }
+    
+    override func setupCell() {
+        let min = prefItem.value.intRangeValue.0
+        let max = prefItem.value.intRangeValue.1
+        
+        slider.minValue = Float(prefItem.actualValues!.first!.intValue)
+        slider.maxValue = Float(prefItem.actualValues!.last!.intValue)
+        
+        slider.selectedMinimum = Float(min)
+        slider.selectedMaximum = Float(max)
+        
+        _ = self.getValueAndUpdate(UpdatePayload(minVal: min, maxVal: max))
+        
+        slider.hideLabels = true
+        //slider.selectedHandleDiameterMultiplier = 1.0
+        slider.delegate = self
+        
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        mainContent.addSubview(slider)
+        
+        self.valueLabel.font = JNPrefCell.boldTextFont
+        
+        valueLabel.sizeToFit()
+        
+        valueLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        mainContent.addSubview(valueLabel)
+        
+        let views : [String:UIView] = ["valueLabel":valueLabel,"slider":slider]
+        
+        let metrics : [String:Any] = ["padding":6]
+        
+        var allConstraints = [NSLayoutConstraint]()
+        
+        do {
+            let labelVerticalConstraints = NSLayoutConstraint.constraints(
+                withVisualFormat: "V:|[valueLabel]|",
+                options: [],
+                metrics: metrics,
+                views: views)
+            allConstraints += labelVerticalConstraints
+        }
+        
+        do {
+            let labelVerticalConstraints = NSLayoutConstraint.constraints(
+                withVisualFormat: "V:|[slider]|",
+                options: [],
+                metrics: metrics,
+                views: views)
+            allConstraints += labelVerticalConstraints
+        }
+        
+        let sliderHorizontalConstraints = NSLayoutConstraint.constraints(
+            withVisualFormat: "H:[valueLabel]-padding-[slider(200)]|",
+            options: [],
+            metrics: metrics,
+            views: views)
+        allConstraints += sliderHorizontalConstraints
+        
+        NSLayoutConstraint.activate(allConstraints)
+    }
+    
+}
+
+extension JNRangeSliderCell : TTRangeSliderDelegate {
+    func rangeSlider(_ sender: TTRangeSlider!, didChangeSelectedMinimumValue selectedMinimum: Float, andMaximumValue selectedMaximum: Float) {
+        print("Delegate")
+        self.getValueAndUpdate(UpdatePayload(minVal: Int(sender.selectedMinimum), maxVal: Int(sender.selectedMaximum)))
+    }
+    
+    func didEndTouches(in sender: TTRangeSlider!) {
+        print("End")
+        //call the send method
+        self.defaultAction(sender: UpdatePayload(minVal: Int(sender.selectedMinimum), maxVal: Int(sender.selectedMaximum)))
+    }
+}
+
 class JNPickerCell : JNPrefCell {
     var valueLabel = UILabel()
     var curIndex = 0
@@ -534,7 +672,7 @@ class JNPickerCell : JNPrefCell {
     override func setupCell() {
         curIndex = self.indexOfValue(prefItem.value)
         
-        self.valueLabel.font = JNPrefCell.defaultTextFont
+        self.valueLabel.font = JNPrefCell.boldTextFont
         
         
         valueLabel.text = self.getDisplayValue(curIndex)
