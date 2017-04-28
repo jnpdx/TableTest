@@ -614,7 +614,7 @@ class JNRangeSliderCell : JNPrefCell {
         }
         
         let sliderHorizontalConstraints = NSLayoutConstraint.constraints(
-            withVisualFormat: "H:[valueLabel]-padding-[slider(200)]|",
+            withVisualFormat: "H:[valueLabel]-padding-[slider(160)]|",
             options: [],
             metrics: metrics,
             views: views)
