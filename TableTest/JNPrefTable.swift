@@ -740,6 +740,33 @@ class JNPickerCell : JNPrefCell {
     }
 }
 
+public class JNTableSectionHeader : UIView {
+    
+    let titleLabel = UILabel()
+    
+    public override init(frame: CGRect) {
+        super.init(frame: frame)
+        titleLabel.font = UIFont(name: "Avenir-Light", size: 14.0)
+        titleLabel.textColor = UIColor(colorLiteralRed: 0.5, green: 0.5, blue: 0.5, alpha: 1.0)
+        self.addSubview(titleLabel)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.leftAnchor.constraint(equalTo: self.leftAnchor, constant: 16.0).isActive = true
+        titleLabel.topAnchor.constraint(equalTo: self.topAnchor).isActive = true
+        
+        self.setTitle("Test header")
+    }
+    
+    required public init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func setTitle(_ text: String?) {
+        titleLabel.text = text?.uppercased()
+    }
+    
+    
+}
+
 public struct PrefItemSection {
     public let title : String
     public var items : [PrefItem]
@@ -764,6 +791,7 @@ open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate 
     
     override open func viewDidLoad() {
         super.viewDidLoad()
+        self.tableView.separatorStyle = .none
         JNPrefCell.registerClasses(onTableView: self.tableView)
     }
 
@@ -780,6 +808,12 @@ open class JNPrefTableViewController: UITableViewController, JNPrefCellDelegate 
 
     override open func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         return tableData[section].title
+    }
+    
+    open override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let header = JNTableSectionHeader(frame: CGRect.zero)
+        header.setTitle(self.tableView(tableView, titleForHeaderInSection: section))
+        return header
     }
     
     override open func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
