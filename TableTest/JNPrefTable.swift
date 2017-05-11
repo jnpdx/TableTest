@@ -285,6 +285,9 @@ class JNPrefCell : UITableViewCell {
         allConstraints += labelHorizontalConstraints
         
         NSLayoutConstraint.activate(allConstraints)
+        
+        mainLabel.adjustsFontSizeToFitWidth = true
+        mainLabel.widthAnchor.constraint(equalTo: self.widthAnchor, multiplier: 0.5).isActive = true
     }
     
     func getValueAndUpdate(_ sender : Any) -> PrefValue {
