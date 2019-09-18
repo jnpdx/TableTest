@@ -4,5 +4,6 @@ Podfile.lock
 *.xcworkspacedata
 
 *.xcbkptlist
+.DS_Store
 
 Carthage/*
